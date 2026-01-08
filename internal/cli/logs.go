@@ -20,7 +20,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(logsCmd)
+	envCmd.AddCommand(logsCmd)
 	logsCmd.Flags().BoolVarP(&logsFollow, "follow", "f", false, "Follow log output")
 	logsCmd.Flags().StringVar(&logsTail, "tail", "", "Number of lines to show from the end")
 }

@@ -19,7 +19,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(createCmd)
+	envCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVar(&createBranch, "branch", "", "Use existing branch instead of creating new")
 	createCmd.Flags().BoolVar(&createNoAttach, "no-attach", false, "Don't attach to tmux session after creation")
 }

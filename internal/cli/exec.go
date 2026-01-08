@@ -25,8 +25,8 @@ var shellCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(execCmd)
-	rootCmd.AddCommand(shellCmd)
+	envCmd.AddCommand(execCmd)
+	envCmd.AddCommand(shellCmd)
 }
 
 func runExec(cmd *cobra.Command, args []string) error {
@@ -56,7 +56,7 @@ func executeInContainer(name, service string, command []string) error {
 
 	status := docker.GetProjectStatus(resolved.ComposeDir, resolved.Environment.DockerProject)
 	if status != docker.StatusRunning {
-		return fmt.Errorf("containers not running (run 'piko up %s' first)", name)
+		return fmt.Errorf("containers not running (run 'piko env up %s' first)", name)
 	}
 
 	if len(command) == 0 {

@@ -19,7 +19,7 @@ var listCmd = &cobra.Command{
 var listAll bool
 
 func init() {
-	rootCmd.AddCommand(listCmd)
+	envCmd.AddCommand(listCmd)
 	listCmd.Flags().BoolVarP(&listAll, "all", "a", false, "List environments from all projects")
 }
 
@@ -40,7 +40,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(environments) == 0 {
-		fmt.Println("No environments yet. Create one with: piko create <name>")
+		fmt.Println("No environments yet. Create one with: piko env create <name>")
 		return nil
 	}
 

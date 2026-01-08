@@ -7,15 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var projectsCmd = &cobra.Command{
-	Use:     "projects",
-	Aliases: []string{"ps"},
+var projectListCmd = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"ls"},
 	Short:   "List all piko projects",
 	RunE:    runProjects,
 }
 
 func init() {
-	rootCmd.AddCommand(projectsCmd)
+	projectCmd.AddCommand(projectListCmd)
 }
 
 func runProjects(cmd *cobra.Command, args []string) error {

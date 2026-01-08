@@ -16,7 +16,7 @@ var editCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(editCmd)
+	envCmd.AddCommand(editCmd)
 }
 
 func runEdit(cmd *cobra.Command, args []string) error {

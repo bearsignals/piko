@@ -68,7 +68,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to check project: %w", err)
 	}
 	if exists {
-		return fmt.Errorf("already initialized (run 'piko list' to see environments)")
+		return fmt.Errorf("already initialized (run 'piko env list' to see environments)")
 	}
 
 	pikoDir := filepath.Join(cwd, ".piko")

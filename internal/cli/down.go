@@ -13,7 +13,7 @@ var downCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(downCmd)
+	envCmd.AddCommand(downCmd)
 }
 
 func runDown(cmd *cobra.Command, args []string) error {

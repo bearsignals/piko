@@ -15,7 +15,7 @@ var destroyCmd = &cobra.Command{
 var destroyVolumes bool
 
 func init() {
-	rootCmd.AddCommand(destroyCmd)
+	envCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVar(&destroyVolumes, "volumes", false, "Also remove Docker volumes")
 }
 

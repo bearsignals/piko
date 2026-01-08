@@ -17,7 +17,7 @@ var pickCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(pickCmd)
+	envCmd.AddCommand(pickCmd)
 }
 
 func runPick(cmd *cobra.Command, args []string) error {

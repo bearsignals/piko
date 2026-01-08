@@ -312,7 +312,7 @@ func UpEnvironment(opts UpEnvironmentOptions) error {
 
 	if opts.Environment.DockerProject == "" {
 		log.Info("Simple mode environment - no containers to start")
-		log.Info("Use 'piko attach' to access the tmux session")
+		log.Info("Use 'piko env attach' to access the tmux session")
 		return nil
 	}
 

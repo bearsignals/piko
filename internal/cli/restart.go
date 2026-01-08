@@ -16,7 +16,7 @@ var restartCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(restartCmd)
+	envCmd.AddCommand(restartCmd)
 }
 
 func runRestart(cmd *cobra.Command, args []string) error {

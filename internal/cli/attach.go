@@ -16,14 +16,14 @@ var attachCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(attachCmd)
+	envCmd.AddCommand(attachCmd)
 }
 
 func runAttach(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	if tmux.IsInsideTmux() {
-		return fmt.Errorf("already inside tmux (use 'piko switch %s' instead)", name)
+		return fmt.Errorf("already inside tmux (use 'piko env switch %s' instead)", name)
 	}
 
 	resolved, err := ResolveEnvironmentGlobally(name)
@@ -35,7 +35,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 	sessionName := tmux.SessionName(resolved.Project.Name, resolved.Environment.Name)
 
 	if !tmux.SessionExists(sessionName) {
-		return fmt.Errorf("session does not exist (run 'piko up %s' first)", name)
+		return fmt.Errorf("session does not exist (run 'piko env up %s' first)", name)
 	}
 
 	return tmux.Attach(sessionName)

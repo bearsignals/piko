@@ -19,7 +19,7 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(statusCmd)
+	envCmd.AddCommand(statusCmd)
 }
 
 type containerInfo struct {

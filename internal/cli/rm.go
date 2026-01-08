@@ -17,7 +17,7 @@ var rmCmd = &cobra.Command{
 var rmForce bool
 
 func init() {
-	rootCmd.AddCommand(rmCmd)
+	projectCmd.AddCommand(rmCmd)
 	rmCmd.Flags().BoolVarP(&rmForce, "force", "f", false, "Force removal even if environments exist")
 }
 

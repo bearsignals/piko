@@ -13,21 +13,28 @@ import (
 )
 
 var envCmd = &cobra.Command{
-	Use:   "env <name>",
-	Short: "Print PIKO_* environment variables",
-	Long:  `Print all PIKO_* environment variables for the given environment. Use with eval: eval $(piko env <name>)`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runEnv,
+	Use:   "env",
+	Short: "Environment management commands",
+	Long:  `Commands for managing piko environments.`,
 }
 
-var envJSON bool
+var varsCmd = &cobra.Command{
+	Use:   "vars <name>",
+	Short: "Print PIKO_* environment variables",
+	Long:  `Print all PIKO_* environment variables for the given environment. Use with eval: eval $(piko env vars <name>)`,
+	Args:  cobra.ExactArgs(1),
+	RunE:  runVars,
+}
+
+var varsJSON bool
 
 func init() {
 	rootCmd.AddCommand(envCmd)
-	envCmd.Flags().BoolVar(&envJSON, "json", false, "Output as JSON")
+	envCmd.AddCommand(varsCmd)
+	varsCmd.Flags().BoolVar(&varsJSON, "json", false, "Output as JSON")
 }
 
-func runEnv(cmd *cobra.Command, args []string) error {
+func runVars(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
 	resolved, err := ResolveEnvironment(name)
@@ -43,7 +50,7 @@ func runEnv(cmd *cobra.Command, args []string) error {
 
 	pikoEnv := env.Build(resolved.Project, resolved.Environment, allocations)
 
-	if envJSON {
+	if varsJSON {
 		data, err := pikoEnv.ToJSON()
 		if err != nil {
 			return fmt.Errorf("failed to generate JSON: %w", err)
