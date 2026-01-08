@@ -2,12 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 
-	"github.com/gwuah/piko/internal/docker"
-	"github.com/gwuah/piko/internal/ports"
+	"github.com/gwuah/piko/internal/operations"
 	"github.com/spf13/cobra"
 )
 
@@ -36,42 +32,10 @@ func runUp(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	if environment.DockerProject == "" {
-		fmt.Println("Simple mode environment - no containers to start")
-		fmt.Println("Use 'piko attach' to access the tmux session")
-		return nil
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
-	if err != nil {
-		return fmt.Errorf("failed to parse compose config: %w", err)
-	}
-
-	servicePorts := composeConfig.GetServicePorts()
-	allocations := ports.Allocate(environment.ID, servicePorts)
-
-	composeProject := composeConfig.Project()
-	docker.ApplyOverrides(composeProject, ctx.Project.Name, name, allocations)
-	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	docker.WriteProjectFile(pikoComposePath, composeProject)
-
-	composeCmd := exec.Command("docker", "compose",
-		"-p", environment.DockerProject,
-		"-f", "docker-compose.piko.yml",
-		"up", "-d")
-	composeCmd.Dir = composeDir
-	composeCmd.Stdout = os.Stdout
-	composeCmd.Stderr = os.Stderr
-
-	if err := composeCmd.Run(); err != nil {
-		return fmt.Errorf("failed to start containers: %w", err)
-	}
-
-	fmt.Printf("✓ Started containers (%s)\n", environment.DockerProject)
-	return nil
+	return operations.UpEnvironment(operations.UpEnvironmentOptions{
+		DB:          ctx.DB,
+		Project:     ctx.Project,
+		Environment: environment,
+		Logger:      &operations.StdoutLogger{},
+	})
 }

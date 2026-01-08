@@ -2,7 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/gwuah/piko/internal/state"
 	"github.com/gwuah/piko/internal/tmux"
 	"github.com/spf13/cobra"
 )
@@ -10,6 +12,7 @@ import (
 var switchCmd = &cobra.Command{
 	Use:   "switch <name>",
 	Short: "Switch to an environment's tmux session",
+	Long:  "Switch to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runSwitch,
 }
@@ -25,18 +28,47 @@ func runSwitch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("not inside tmux (use 'piko attach %s' instead)", name)
 	}
 
-	ctx, err := NewContext()
+	ctx, err := NewContextWithoutProject()
 	if err != nil {
 		return err
 	}
 	defer ctx.Close()
 
-	_, err = ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
+	var projectName, envName string
+	var project *state.Project
+
+	if strings.Contains(name, "/") {
+		parts := strings.SplitN(name, "/", 2)
+		projectName, envName = parts[0], parts[1]
+		project, err = ctx.DB.GetProjectByName(projectName)
+		if err != nil {
+			return fmt.Errorf("project %q not found", projectName)
+		}
+		_, err = ctx.DB.GetEnvironmentByName(project.ID, envName)
+		if err != nil {
+			return fmt.Errorf("environment %q not found in project %q", envName, projectName)
+		}
+	} else {
+		envName = name
+		results, err := ctx.DB.FindEnvironmentGlobally(envName)
+		if err != nil {
+			return err
+		}
+		if len(results) == 0 {
+			return fmt.Errorf("environment %q not found", envName)
+		}
+		if len(results) > 1 {
+			fmt.Printf("Multiple environments named %q found:\n", envName)
+			for _, r := range results {
+				fmt.Printf("  %s/%s\n", r.Project.Name, r.Environment.Name)
+			}
+			return fmt.Errorf("use 'piko switch <project>/%s' to specify which one", envName)
+		}
+		project = results[0].Project
+		projectName = project.Name
 	}
 
-	sessionName := tmux.SessionName(ctx.Project.Name, name)
+	sessionName := tmux.SessionName(projectName, envName)
 
 	if !tmux.SessionExists(sessionName) {
 		return fmt.Errorf("session does not exist (run 'piko up %s' first)", name)

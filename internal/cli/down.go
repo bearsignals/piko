@@ -2,10 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 
+	"github.com/gwuah/piko/internal/operations"
 	"github.com/spf13/cobra"
 )
 
@@ -34,25 +32,10 @@ func runDown(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	if environment.DockerProject == "" {
-		fmt.Println("Simple mode environment - no containers to stop")
-		return nil
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	composeCmd := exec.Command("docker", "compose", "-p", environment.DockerProject, "down")
-	composeCmd.Dir = composeDir
-	composeCmd.Stdout = os.Stdout
-	composeCmd.Stderr = os.Stderr
-
-	if err := composeCmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop containers: %w", err)
-	}
-
-	fmt.Println("✓ Stopped containers")
-	return nil
+	return operations.DownEnvironment(operations.DownEnvironmentOptions{
+		DB:          ctx.DB,
+		Project:     ctx.Project,
+		Environment: environment,
+		Logger:      &operations.StdoutLogger{},
+	})
 }

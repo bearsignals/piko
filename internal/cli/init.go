@@ -46,27 +46,34 @@ func runInit(cmd *cobra.Command, args []string) error {
 	composeFile, err := docker.DetectComposeFile(composeSearchDir)
 	if err != nil {
 		composeFile = ""
-		fmt.Println("✓ No docker-compose file found, using simple mode")
+		fmt.Println("No docker-compose file found, using simple mode")
 	} else if initComposeDir != "" {
-		fmt.Printf("✓ Detected %s/%s\n", initComposeDir, composeFile)
+		fmt.Printf("Detected %s/%s\n", initComposeDir, composeFile)
 	} else {
-		fmt.Printf("✓ Detected %s\n", composeFile)
+		fmt.Printf("Detected %s\n", composeFile)
 	}
 
-	pikoDir := filepath.Join(cwd, ".piko")
-	if _, err := os.Stat(pikoDir); err == nil {
-		return fmt.Errorf("already initialized (run 'piko list' to see environments)")
-	}
-
-	db, err := state.CreateLocal(cwd)
+	db, err := state.OpenCentral()
 	if err != nil {
-		return fmt.Errorf("failed to create database: %w", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
 	if err := db.Initialize(); err != nil {
-		os.RemoveAll(pikoDir)
 		return fmt.Errorf("failed to initialize database: %w", err)
+	}
+
+	exists, err := db.ProjectExistsByPath(cwd)
+	if err != nil {
+		return fmt.Errorf("failed to check project: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("already initialized (run 'piko list' to see environments)")
+	}
+
+	pikoDir := filepath.Join(cwd, ".piko")
+	if err := os.MkdirAll(pikoDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .piko: %w", err)
 	}
 
 	projectName := filepath.Base(cwd)
@@ -85,7 +92,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Warning: could not update .gitignore: %v\n", err)
 	}
 
-	fmt.Printf("✓ Project %q initialized\n", projectName)
+	fmt.Printf("Project %q initialized\n", projectName)
 	return nil
 }
 

@@ -4,19 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/gwuah/piko/internal/config"
 	"github.com/gwuah/piko/internal/docker"
-	"github.com/gwuah/piko/internal/env"
-	"github.com/gwuah/piko/internal/git"
-	"github.com/gwuah/piko/internal/ports"
+	"github.com/gwuah/piko/internal/operations"
 	"github.com/gwuah/piko/internal/state"
-	"github.com/gwuah/piko/internal/tmux"
 )
 
 type ProjectResponse struct {
@@ -275,161 +270,67 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	exists, err := s.db.EnvironmentExists(project.ID, req.Name)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
-	}
-	if exists {
-		writeJSON(w, http.StatusConflict, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q already exists", req.Name)})
-		return
-	}
-
-	worktreesDir := filepath.Join(project.RootPath, ".piko", "worktrees")
-
-	wtOpts := git.WorktreeOptions{
-		Name:       req.Name,
-		BasePath:   worktreesDir,
-		BranchName: req.Branch,
-	}
-	wt, err := git.CreateWorktree(wtOpts)
+	result, err := operations.CreateEnvironment(operations.CreateEnvironmentOptions{
+		DB:      s.db,
+		Project: project,
+		Name:    req.Name,
+		Branch:  req.Branch,
+		Logger:  &operations.SilentLogger{},
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	dataDir := filepath.Join(project.RootPath, ".piko", "data", req.Name)
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		git.RemoveWorktree(wt.Path)
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
+	status := "running"
+	mode := "docker"
+	if result.IsSimple {
+		status = "simple"
+		mode = "simple"
 	}
-
-	composeDir := wt.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(wt.Path, project.ComposeDir)
-	}
-
-	_, composeErr := docker.DetectComposeFile(composeDir)
-	isSimpleMode := composeErr != nil
-
-	dockerProject := ""
-	if !isSimpleMode {
-		dockerProject = fmt.Sprintf("piko-%s-%s", project.Name, req.Name)
-	}
-
-	environment := &state.Environment{
-		ProjectID:     project.ID,
-		Name:          req.Name,
-		Branch:        wt.Branch,
-		Path:          wt.Path,
-		DockerProject: dockerProject,
-	}
-	envID, err := s.db.InsertEnvironment(environment)
-	if err != nil {
-		os.RemoveAll(dataDir)
-		git.RemoveWorktree(wt.Path)
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
-	}
-	environment.ID = envID
-
-	sessionName := tmux.SessionName(project.Name, req.Name)
-	cfg, _ := config.Load(project.RootPath)
-
-	if isSimpleMode {
-		tmuxCfg := tmux.SessionConfig{
-			SessionName: sessionName,
-			WorkDir:     wt.Path,
-		}
-		if cfg != nil {
-			tmuxCfg.Shells = cfg.Shells
-		}
-		tmux.CreateFullSession(tmuxCfg)
-
-		writeJSON(w, http.StatusOK, SuccessResponse{
-			Success: true,
-			Environment: &EnvironmentResponse{
-				Name:    environment.Name,
-				Status:  "simple",
-				Branch:  environment.Branch,
-				Path:    environment.Path,
-				Mode:    "simple",
-				DataDir: dataDir,
-				EnvID:   envID,
-			},
-		})
-		return
-	}
-
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
-	if err != nil {
-		s.db.DeleteEnvironment(project.ID, req.Name)
-		os.RemoveAll(dataDir)
-		git.RemoveWorktree(wt.Path)
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	servicePorts := composeConfig.GetServicePorts()
-	allocations := ports.Allocate(envID, servicePorts)
-
-	composeProject := composeConfig.Project()
-	docker.ApplyOverrides(composeProject, project.Name, req.Name, allocations)
-	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
-		s.db.DeleteEnvironment(project.ID, req.Name)
-		os.RemoveAll(dataDir)
-		git.RemoveWorktree(wt.Path)
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	composeCmd := exec.Command("docker", "compose",
-		"-p", dockerProject,
-		"-f", "docker-compose.piko.yml",
-		"up", "-d")
-	composeCmd.Dir = composeDir
-
-	if err := composeCmd.Run(); err != nil {
-		s.db.DeleteEnvironment(project.ID, req.Name)
-		os.RemoveAll(dataDir)
-		git.RemoveWorktree(wt.Path)
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to start containers"})
-		return
-	}
-
-	if cfg != nil && cfg.Scripts.Setup != "" {
-		pikoEnv := env.Build(project, environment, allocations)
-		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
-		runner.RunSetup(cfg.Scripts.Setup)
-	}
-
-	var services []string
-	if composeConfig != nil {
-		services = composeConfig.GetServiceNames()
-	}
-
-	tmuxCfg := tmux.SessionConfig{
-		SessionName:   sessionName,
-		WorkDir:       wt.Path,
-		DockerProject: dockerProject,
-		Services:      services,
-	}
-	if cfg != nil {
-		tmuxCfg.Shells = cfg.Shells
-	}
-	tmux.CreateFullSession(tmuxCfg)
 
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Success: true,
 		Environment: &EnvironmentResponse{
-			Name:   environment.Name,
-			Status: "running",
-			Branch: environment.Branch,
-			Path:   environment.Path,
+			Name:    result.Environment.Name,
+			Status:  status,
+			Branch:  result.Environment.Branch,
+			Path:    result.Environment.Path,
+			Mode:    mode,
+			DataDir: result.DataDir,
+			EnvID:   result.Environment.ID,
 		},
 	})
+}
+
+func (s *Server) handleDestroyEnvironment(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+
+	project, err := s.getProjectFromPath(r)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	environment, err := s.db.GetEnvironmentByName(project.ID, name)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
+		return
+	}
+
+	err = operations.DestroyEnvironment(operations.DestroyEnvironmentOptions{
+		DB:            s.db,
+		Project:       project,
+		Environment:   environment,
+		RemoveVolumes: false,
+		Logger:        &operations.SilentLogger{},
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 func (s *Server) handleOpenInEditor(w http.ResponseWriter, r *http.Request) {
@@ -481,38 +382,14 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if environment.DockerProject == "" {
-		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
-		return
-	}
-
-	composeDir := environment.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, project.ComposeDir)
-	}
-
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
+	err = operations.UpEnvironment(operations.UpEnvironmentOptions{
+		DB:          s.db,
+		Project:     project,
+		Environment: environment,
+		Logger:      &operations.SilentLogger{},
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	servicePorts := composeConfig.GetServicePorts()
-	allocations := ports.Allocate(environment.ID, servicePorts)
-
-	composeProject := composeConfig.Project()
-	docker.ApplyOverrides(composeProject, project.Name, name, allocations)
-	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	docker.WriteProjectFile(pikoComposePath, composeProject)
-
-	cmd := exec.Command("docker", "compose",
-		"-p", environment.DockerProject,
-		"-f", "docker-compose.piko.yml",
-		"up", "-d")
-	cmd.Dir = composeDir
-
-	if err := cmd.Run(); err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to start containers"})
 		return
 	}
 
@@ -534,28 +411,21 @@ func (s *Server) handleDown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if environment.DockerProject == "" {
-		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
-		return
-	}
-
-	composeDir := environment.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, project.ComposeDir)
-	}
-
-	cmd := exec.Command("docker", "compose", "-p", environment.DockerProject, "down")
-	cmd.Dir = composeDir
-
-	if err := cmd.Run(); err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to stop containers"})
+	err = operations.DownEnvironment(operations.DownEnvironmentOptions{
+		DB:          s.db,
+		Project:     project,
+		Environment: environment,
+		Logger:      &operations.SilentLogger{},
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }
 
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)

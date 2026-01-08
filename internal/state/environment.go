@@ -151,3 +151,40 @@ func (db *DB) DeleteEnvironment(projectID int64, name string) error {
 
 	return nil
 }
+
+type EnvironmentWithProject struct {
+	Environment *Environment
+	Project     *Project
+}
+
+func (db *DB) FindEnvironmentGlobally(name string) ([]EnvironmentWithProject, error) {
+	rows, err := db.conn.Query(
+		`SELECT e.id, e.project_id, e.name, e.branch, e.path, e.docker_project, e.tmux_session, e.created_at,
+		        p.id, p.name, p.root_path, p.compose_file, COALESCE(p.compose_dir, ''), p.created_at
+		 FROM environments e
+		 JOIN projects p ON e.project_id = p.id
+		 WHERE e.name = ?
+		 ORDER BY e.created_at DESC`,
+		name,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find environment: %w", err)
+	}
+	defer rows.Close()
+
+	var results []EnvironmentWithProject
+	for rows.Next() {
+		var e Environment
+		var p Project
+		err := rows.Scan(
+			&e.ID, &e.ProjectID, &e.Name, &e.Branch, &e.Path, &e.DockerProject, &e.TmuxSession, &e.CreatedAt,
+			&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.ComposeDir, &p.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan environment: %w", err)
+		}
+		results = append(results, EnvironmentWithProject{Environment: &e, Project: &p})
+	}
+
+	return results, rows.Err()
+}
