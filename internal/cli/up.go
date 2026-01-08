@@ -47,7 +47,12 @@ func runUp(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	composeConfig, err := docker.ParseComposeConfig(env.Path)
+	composeDir := env.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(env.Path, project.ComposeDir)
+	}
+
+	composeConfig, err := docker.ParseComposeConfig(composeDir)
 	if err != nil {
 		return fmt.Errorf("failed to parse compose config: %w", err)
 	}
@@ -56,7 +61,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 	allocations := ports.Allocate(env.ID, servicePorts)
 
 	override := docker.GenerateOverride(project.Name, name, allocations)
-	overridePath := filepath.Join(env.Path, "docker-compose.piko.yml")
+	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
 	if err := docker.WriteOverrideFile(overridePath, override); err != nil {
 		return fmt.Errorf("failed to write override file: %w", err)
 	}
@@ -66,7 +71,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
-	composeCmd.Dir = env.Path
+	composeCmd.Dir = composeDir
 	composeCmd.Stdout = os.Stdout
 	composeCmd.Stderr = os.Stderr
 

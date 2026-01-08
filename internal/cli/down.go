@@ -35,13 +35,23 @@ func runDown(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
+	project, err := db.GetProject()
+	if err != nil {
+		return fmt.Errorf("failed to get project: %w", err)
+	}
+
 	env, err := db.GetEnvironmentByName(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
+	composeDir := env.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(env.Path, project.ComposeDir)
+	}
+
 	composeCmd := exec.Command("docker", "compose", "-p", env.DockerProject, "down")
-	composeCmd.Dir = env.Path
+	composeCmd.Dir = composeDir
 	composeCmd.Stdout = os.Stdout
 	composeCmd.Stderr = os.Stderr
 

@@ -11,6 +11,7 @@ import (
 	"github.com/gwuah/piko/internal/git"
 	"github.com/gwuah/piko/internal/ports"
 	"github.com/gwuah/piko/internal/state"
+	"github.com/gwuah/piko/internal/tmux"
 	"github.com/spf13/cobra"
 )
 
@@ -68,13 +69,27 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	sessionName := tmux.SessionName(project.Name, name)
+	if tmux.SessionExists(sessionName) {
+		if err := tmux.KillSession(sessionName); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to kill tmux session: %v\n", err)
+		} else {
+			fmt.Println("✓ Killed tmux session")
+		}
+	}
+
+	composeDir := environment.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	}
+
 	var composeCmd *exec.Cmd
 	if destroyVolumes {
 		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "down", "-v")
 	} else {
 		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "down")
 	}
-	composeCmd.Dir = environment.Path
+	composeCmd.Dir = composeDir
 	composeCmd.Stdout = os.Stdout
 	composeCmd.Stderr = os.Stderr
 

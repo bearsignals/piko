@@ -56,8 +56,12 @@ func runEnv(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	// 3. Discover ports via docker compose port
-	allocations, err := discoverPorts(environment)
+	composeDir := environment.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	}
+
+	allocations, err := discoverPorts(environment, composeDir)
 	if err != nil {
 		return fmt.Errorf("failed to discover ports: %w", err)
 	}
@@ -79,22 +83,20 @@ func runEnv(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func discoverPorts(environment *state.Environment) ([]ports.Allocation, error) {
+func discoverPorts(environment *state.Environment, composeDir string) ([]ports.Allocation, error) {
 	var allocations []ports.Allocation
 
-	// Get services from compose config
-	composeConfig, err := docker.ParseComposeConfig(environment.Path)
+	composeConfig, err := docker.ParseComposeConfig(composeDir)
 	if err != nil {
 		return nil, err
 	}
 
 	for service, containerPorts := range composeConfig.GetServicePorts() {
 		for _, containerPort := range containerPorts {
-			// docker compose -p <project> port <service> <port>
 			cmd := exec.Command("docker", "compose",
 				"-p", environment.DockerProject,
 				"port", service, fmt.Sprintf("%d", containerPort))
-			cmd.Dir = environment.Path
+			cmd.Dir = composeDir
 
 			output, err := cmd.Output()
 			if err != nil {

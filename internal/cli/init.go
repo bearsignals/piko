@@ -15,12 +15,14 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a project for piko",
-	Long:  `Initialize the current directory as a piko project. Requires a git repository with a docker-compose file.`,
 	RunE:  runInit,
 }
 
+var initComposeDir string
+
 func init() {
 	rootCmd.AddCommand(initCmd)
+	initCmd.Flags().StringVar(&initComposeDir, "compose-dir", "", "Directory containing docker-compose.yml (relative to git root)")
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
@@ -29,59 +31,68 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	// 1. Validate git repo
 	if !git.IsGitRepo(cwd) {
 		return fmt.Errorf("not a git repository (missing .git)")
 	}
 
-	// 2. Detect compose file
-	composeFile, err := docker.DetectComposeFile(cwd)
+	composeSearchDir := cwd
+	if initComposeDir != "" {
+		composeSearchDir = filepath.Join(cwd, initComposeDir)
+		if _, err := os.Stat(composeSearchDir); os.IsNotExist(err) {
+			return fmt.Errorf("compose directory does not exist: %s", initComposeDir)
+		}
+	}
+
+	composeFile, err := docker.DetectComposeFile(composeSearchDir)
 	if err != nil {
+		if initComposeDir == "" {
+			return fmt.Errorf("%v\n\nFor monorepos, use: piko init --compose-dir <subdir>", err)
+		}
 		return err
 	}
-	fmt.Printf("✓ Detected %s\n", composeFile)
 
-	// 3. Check not already initialized
+	if initComposeDir != "" {
+		fmt.Printf("✓ Detected %s/%s\n", initComposeDir, composeFile)
+	} else {
+		fmt.Printf("✓ Detected %s\n", composeFile)
+	}
+
 	pikoDir := filepath.Join(cwd, ".piko")
 	dbPath := filepath.Join(pikoDir, "state.db")
 	if _, err := os.Stat(dbPath); err == nil {
 		return fmt.Errorf("already initialized (run 'piko status' to see state)")
 	}
 
-	// 4. Create .piko directory
 	if err := os.MkdirAll(pikoDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .piko: %w", err)
 	}
 
-	// 5. Initialize database
 	db, err := state.Open(dbPath)
 	if err != nil {
-		os.RemoveAll(pikoDir) // Clean up on failure
+		os.RemoveAll(pikoDir)
 		return fmt.Errorf("failed to create database: %w", err)
 	}
 	defer db.Close()
 
 	if err := db.Initialize(); err != nil {
-		os.RemoveAll(pikoDir) // Clean up on failure
+		os.RemoveAll(pikoDir)
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 	fmt.Println("✓ Created .piko/state.db")
 
-	// 6. Insert project record
 	projectName := filepath.Base(cwd)
 	project := &state.Project{
 		Name:        projectName,
 		RootPath:    cwd,
 		ComposeFile: composeFile,
+		ComposeDir:  initComposeDir,
 	}
 	if err := db.InsertProject(project); err != nil {
-		os.RemoveAll(pikoDir) // Clean up on failure
+		os.RemoveAll(pikoDir)
 		return fmt.Errorf("failed to save project: %w", err)
 	}
 
-	// 7. Update .gitignore
 	if err := updateGitignore(cwd); err != nil {
-		// Non-fatal, just warn
 		fmt.Fprintf(os.Stderr, "Warning: could not update .gitignore: %v\n", err)
 	}
 
@@ -97,23 +108,20 @@ func updateGitignore(dir string) error {
 		return err
 	}
 
-	// Check if .piko/ is already in .gitignore
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == ".piko/" || trimmed == ".piko" {
-			return nil // Already present
+			return nil
 		}
 	}
 
-	// Append .piko/ to .gitignore
 	f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	// Add newline if file doesn't end with one
 	if len(content) > 0 && content[len(content)-1] != '\n' {
 		if _, err := f.WriteString("\n"); err != nil {
 			return err

@@ -54,6 +54,12 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) {
+	project, err := s.db.GetProject()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
 	environments, err := s.db.ListEnvironments()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
@@ -62,7 +68,11 @@ func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) 
 
 	response := make([]EnvironmentResponse, 0, len(environments))
 	for _, e := range environments {
-		status := docker.GetProjectStatus(e.Path, e.DockerProject)
+		composeDir := e.Path
+		if project.ComposeDir != "" {
+			composeDir = filepath.Join(e.Path, project.ComposeDir)
+		}
+		status := docker.GetProjectStatus(composeDir, e.DockerProject)
 		response = append(response, EnvironmentResponse{
 			Name:   e.Name,
 			Status: string(status),
@@ -115,7 +125,12 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	composeConfig, err := docker.ParseComposeConfig(wt.Path)
+	composeDir := wt.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(wt.Path, project.ComposeDir)
+	}
+
+	composeConfig, err := docker.ParseComposeConfig(composeDir)
 	if err != nil {
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
@@ -142,7 +157,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	allocations := ports.Allocate(envID, servicePorts)
 
 	override := docker.GenerateOverride(project.Name, req.Name, allocations)
-	overridePath := filepath.Join(wt.Path, "docker-compose.piko.yml")
+	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
 	if err := docker.WriteOverrideFile(overridePath, override); err != nil {
 		s.db.DeleteEnvironment(req.Name)
 		git.RemoveWorktree(wt.Path)
@@ -155,7 +170,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
-	composeCmd.Dir = wt.Path
+	composeCmd.Dir = composeDir
 
 	if err := composeCmd.Run(); err != nil {
 		s.db.DeleteEnvironment(req.Name)
@@ -225,7 +240,12 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeConfig, err := docker.ParseComposeConfig(environment.Path)
+	composeDir := environment.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	}
+
+	composeConfig, err := docker.ParseComposeConfig(composeDir)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
@@ -235,7 +255,7 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 	allocations := ports.Allocate(environment.ID, servicePorts)
 
 	override := docker.GenerateOverride(project.Name, name, allocations)
-	overridePath := filepath.Join(environment.Path, "docker-compose.piko.yml")
+	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
 	docker.WriteOverrideFile(overridePath, override)
 
 	cmd := exec.Command("docker", "compose",
@@ -243,7 +263,7 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
-	cmd.Dir = environment.Path
+	cmd.Dir = composeDir
 
 	if err := cmd.Run(); err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to start containers"})
@@ -256,14 +276,25 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDown(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
+	project, err := s.db.GetProject()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
 	environment, err := s.db.GetEnvironmentByName(name)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
 		return
 	}
 
+	composeDir := environment.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	}
+
 	cmd := exec.Command("docker", "compose", "-p", environment.DockerProject, "down")
-	cmd.Dir = environment.Path
+	cmd.Dir = composeDir
 
 	if err := cmd.Run(); err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to stop containers"})

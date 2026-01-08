@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS project (
     name TEXT UNIQUE NOT NULL,
     root_path TEXT NOT NULL,
     compose_file TEXT DEFAULT 'docker-compose.yml',
+    compose_dir TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,6 +30,10 @@ CREATE TABLE IF NOT EXISTS environments (
 );
 `
 
+const migration = `
+ALTER TABLE project ADD COLUMN compose_dir TEXT DEFAULT '';
+`
+
 type DB struct {
 	conn *sql.DB
 	path string
@@ -40,7 +45,6 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Enable foreign keys
 	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
@@ -58,5 +62,10 @@ func (db *DB) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
+	return nil
+}
+
+func (db *DB) Migrate() error {
+	db.conn.Exec(migration)
 	return nil
 }

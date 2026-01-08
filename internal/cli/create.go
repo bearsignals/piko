@@ -12,22 +12,26 @@ import (
 	"github.com/gwuah/piko/internal/git"
 	"github.com/gwuah/piko/internal/ports"
 	"github.com/gwuah/piko/internal/state"
+	"github.com/gwuah/piko/internal/tmux"
 	"github.com/spf13/cobra"
 )
 
 var createCmd = &cobra.Command{
 	Use:   "create <name>",
 	Short: "Create a new worktree environment",
-	Long:  `Create a new isolated development environment with its own git worktree and Docker containers.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runCreate,
 }
 
-var createBranch string
+var (
+	createBranch   string
+	createNoAttach bool
+)
 
 func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVar(&createBranch, "branch", "", "Use existing branch instead of creating new")
+	createCmd.Flags().BoolVar(&createNoAttach, "no-attach", false, "Don't attach to tmux session after creation")
 }
 
 func runCreate(cmd *cobra.Command, args []string) error {
@@ -37,26 +41,22 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	// 1. Validate initialized
 	dbPath := filepath.Join(cwd, ".piko", "state.db")
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		return fmt.Errorf("not initialized (run 'piko init' first)")
 	}
 
-	// 2. Open database
 	db, err := state.Open(dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
-	// 3. Get project
 	project, err := db.GetProject()
 	if err != nil {
 		return fmt.Errorf("failed to get project: %w", err)
 	}
 
-	// 4. Check name not used
 	exists, err := db.EnvironmentExists(name)
 	if err != nil {
 		return fmt.Errorf("failed to check environment: %w", err)
@@ -65,19 +65,16 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment %q already exists (use 'piko destroy %s' first)", name, name)
 	}
 
-	// 5. Load config
 	cfg, err := config.Load(cwd)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// 6. Create worktrees directory
 	worktreesDir := filepath.Join(cwd, ".piko", "worktrees")
 	if err := os.MkdirAll(worktreesDir, 0755); err != nil {
 		return fmt.Errorf("failed to create worktrees directory: %w", err)
 	}
 
-	// 7. Create worktree
 	wtOpts := git.WorktreeOptions{
 		Name:       name,
 		BasePath:   worktreesDir,
@@ -89,20 +86,24 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("✓ Created worktree at %s (branch: %s)\n", wt.Path, wt.Branch)
 
-	// Helper to clean up on failure
 	cleanup := func() {
 		git.RemoveWorktree(wt.Path)
 	}
 
-	// 8. Parse compose config from worktree
-	composeConfig, err := docker.ParseComposeConfig(wt.Path)
+	composeDir := wt.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(wt.Path, project.ComposeDir)
+	}
+
+	composeConfig, err := docker.ParseComposeConfig(composeDir)
 	if err != nil {
 		cleanup()
 		return fmt.Errorf("failed to parse compose config: %w", err)
 	}
 
-	// 9. Insert environment (to get ID for port allocation)
 	dockerProject := fmt.Sprintf("piko-%s-%s", project.Name, name)
+	sessionName := tmux.SessionName(project.Name, name)
+
 	environment := &state.Environment{
 		ProjectID:     project.ID,
 		Name:          name,
@@ -117,32 +118,40 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 	environment.ID = envID
 
-	// Helper to clean up environment record
 	cleanupWithDB := func() {
 		db.DeleteEnvironment(name)
 		cleanup()
 	}
 
-	// 10. Allocate ports
 	servicePorts := composeConfig.GetServicePorts()
 	allocations := ports.Allocate(envID, servicePorts)
 
-	// 11. Generate override file
 	override := docker.GenerateOverride(project.Name, name, allocations)
-	overridePath := filepath.Join(wt.Path, "docker-compose.piko.yml")
+	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
 	if err := docker.WriteOverrideFile(overridePath, override); err != nil {
 		cleanupWithDB()
 		return fmt.Errorf("failed to write override file: %w", err)
 	}
 	fmt.Println("✓ Generated docker-compose.piko.yml")
 
-	// 12. Start containers
+	if cfg.Scripts.Prepare != "" {
+		pikoEnv := env.Build(project, environment, allocations)
+		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
+
+		fmt.Println("Running prepare script...")
+		if err := runner.RunPrepare(cfg.Scripts.Prepare); err != nil {
+			cleanupWithDB()
+			return fmt.Errorf("prepare script failed: %w", err)
+		}
+		fmt.Println("✓ Ran prepare script")
+	}
+
 	composeCmd := exec.Command("docker", "compose",
 		"-p", dockerProject,
 		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
-	composeCmd.Dir = wt.Path
+	composeCmd.Dir = composeDir
 	composeCmd.Stdout = os.Stdout
 	composeCmd.Stderr = os.Stderr
 
@@ -152,15 +161,13 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("✓ Started containers (%s)\n", dockerProject)
 
-	// Helper to stop containers on failure
 	cleanupWithContainers := func() {
 		stopCmd := exec.Command("docker", "compose", "-p", dockerProject, "down")
-		stopCmd.Dir = wt.Path
+		stopCmd.Dir = composeDir
 		stopCmd.Run()
 		cleanupWithDB()
 	}
 
-	// 13. Run setup script
 	if cfg.Scripts.Setup != "" {
 		pikoEnv := env.Build(project, environment, allocations)
 		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
@@ -173,6 +180,27 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		fmt.Println("✓ Ran setup script")
 	}
 
+	services := composeConfig.GetServiceNames()
+	tmuxCfg := tmux.SessionConfig{
+		SessionName:   sessionName,
+		WorkDir:       wt.Path,
+		DockerProject: dockerProject,
+		Services:      services,
+		Shells:        cfg.Shells,
+	}
+
+	if err := tmux.CreateFullSession(tmuxCfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to create tmux session: %v\n", err)
+	} else {
+		fmt.Printf("✓ Created tmux session %s\n", sessionName)
+	}
+
 	fmt.Println("✓ Environment ready")
+
+	if !createNoAttach && tmux.SessionExists(sessionName) {
+		fmt.Println("→ Attaching...")
+		return tmux.Attach(sessionName)
+	}
+
 	return nil
 }

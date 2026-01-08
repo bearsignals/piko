@@ -16,8 +16,8 @@ type Config struct {
 	Ignore  []string          `yaml:"ignore"`
 }
 
-// Scripts contains the lifecycle scripts.
 type Scripts struct {
+	Prepare string `yaml:"prepare"`
 	Setup   string `yaml:"setup"`
 	Run     string `yaml:"run"`
 	Destroy string `yaml:"destroy"`

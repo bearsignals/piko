@@ -1,6 +1,7 @@
 <strict_rules>
 
 - do not add any comments to the generated code. it's not productive.
+- fix all diagnostic issues before returning.
   </strict_rules>
 
 <test_environment>

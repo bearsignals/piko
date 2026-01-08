@@ -20,8 +20,13 @@ func NewScriptRunner(workDir string, env []string) *ScriptRunner {
 	}
 }
 
-// RunSetup executes the setup script.
-// Returns nil if the script is empty.
+func (r *ScriptRunner) RunPrepare(script string) error {
+	if script == "" {
+		return nil
+	}
+	return r.run(script)
+}
+
 func (r *ScriptRunner) RunSetup(script string) error {
 	if script == "" {
 		return nil

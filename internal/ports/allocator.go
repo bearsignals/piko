@@ -14,17 +14,21 @@ type Allocation struct {
 	HostPort      int
 }
 
-// Allocate calculates deterministic port allocations for all services.
-// Formula: base_port = 10000 + (worktree_id * 100)
-//
-//	host_port = base_port + (container_port % 100)
 func Allocate(worktreeID int64, servicePorts map[string][]int) []Allocation {
 	basePort := BasePort + (int(worktreeID) * PortRangePerWorktree)
 
 	var allocations []Allocation
+	usedPorts := make(map[int]bool)
+	portIndex := 0
+
 	for service, ports := range servicePorts {
 		for _, containerPort := range ports {
 			hostPort := basePort + (containerPort % 100)
+			for usedPorts[hostPort] {
+				hostPort = basePort + portIndex
+				portIndex++
+			}
+			usedPorts[hostPort] = true
 			allocations = append(allocations, Allocation{
 				Service:       service,
 				ContainerPort: containerPort,

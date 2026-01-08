@@ -7,7 +7,8 @@ build:
 	go build -o $(BINARY_NAME) ./cmd/piko
 
 install: build
-	cp $(BINARY_NAME) $(INSTALL_PATH)/$(BINARY_NAME)
+	sudo cp $(BINARY_NAME) $(INSTALL_PATH)/$(BINARY_NAME)
+	rm -f $(BINARY_NAME)
 
 clean:
 	rm -f $(BINARY_NAME)

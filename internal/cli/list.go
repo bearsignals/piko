@@ -40,6 +40,11 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
+	project, err := db.GetProject()
+	if err != nil {
+		return fmt.Errorf("failed to get project: %w", err)
+	}
+
 	environments, err := db.ListEnvironments()
 	if err != nil {
 		return fmt.Errorf("failed to list environments: %w", err)
@@ -54,7 +59,11 @@ func runList(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(w, "NAME\tSTATUS\tBRANCH\tCREATED")
 
 	for _, env := range environments {
-		status := docker.GetProjectStatus(env.Path, env.DockerProject)
+		composeDir := env.Path
+		if project.ComposeDir != "" {
+			composeDir = filepath.Join(env.Path, project.ComposeDir)
+		}
+		status := docker.GetProjectStatus(composeDir, env.DockerProject)
 		created := formatTimeAgo(env.CreatedAt)
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", env.Name, status, env.Branch, created)
 	}

@@ -3,6 +3,7 @@ package state
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"time"
 )
 
@@ -11,13 +12,21 @@ type Project struct {
 	Name        string
 	RootPath    string
 	ComposeFile string
+	ComposeDir  string
 	CreatedAt   time.Time
+}
+
+func (p *Project) ComposeFullDir() string {
+	if p.ComposeDir == "" {
+		return p.RootPath
+	}
+	return filepath.Join(p.RootPath, p.ComposeDir)
 }
 
 func (db *DB) InsertProject(p *Project) error {
 	result, err := db.conn.Exec(
-		`INSERT INTO project (name, root_path, compose_file) VALUES (?, ?, ?)`,
-		p.Name, p.RootPath, p.ComposeFile,
+		`INSERT INTO project (name, root_path, compose_file, compose_dir) VALUES (?, ?, ?, ?)`,
+		p.Name, p.RootPath, p.ComposeFile, p.ComposeDir,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
@@ -34,11 +43,11 @@ func (db *DB) InsertProject(p *Project) error {
 
 func (db *DB) GetProject() (*Project, error) {
 	row := db.conn.QueryRow(
-		`SELECT id, name, root_path, compose_file, created_at FROM project LIMIT 1`,
+		`SELECT id, name, root_path, compose_file, COALESCE(compose_dir, ''), created_at FROM project LIMIT 1`,
 	)
 
 	var p Project
-	err := row.Scan(&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.CreatedAt)
+	err := row.Scan(&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.ComposeDir, &p.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("no project found")
 	}
