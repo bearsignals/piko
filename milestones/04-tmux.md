@@ -33,54 +33,54 @@ $ piko attach feature-auth   # from outside tmux
 ## Tasks
 
 ### 3.1 Session Creation
-- [ ] Create session: `tmux new-session -d -s "piko/<project>/<name>"`
-- [ ] Set default directory to worktree path
-- [ ] Store session name in SQLite
+- [x] Create session: `tmux new-session -d -s "piko/<project>/<name>"`
+- [x] Set default directory to worktree path
+- [x] Store session name in SQLite
 
 ### 3.2 Window: Shell
-- [ ] First window named "shell"
-- [ ] Runs user's shell at worktree path
-- [ ] Command: `cd <worktree> && $SHELL`
+- [x] First window named "shell"
+- [x] Runs user's shell at worktree path
+- [x] Command: `cd <worktree> && $SHELL`
 
 ### 3.3 Window: Services
-- [ ] Parse services from compose config
-- [ ] Create window for each service
-- [ ] Command: `docker compose -p <project> exec <service> <shell>`
-- [ ] Shell lookup order:
+- [x] Parse services from compose config
+- [x] Create window for each service
+- [x] Command: `docker compose -p <project> exec <service> <shell>`
+- [x] Shell lookup order:
   1. `shells.<service>` from `.piko.yml` (e.g., `db: psql -U postgres`)
   2. Default: `sh`
-- [ ] No automatic inference from image names (explicit > magic)
+- [x] No automatic inference from image names (explicit > magic)
 
 ### 3.4 Window: Logs
-- [ ] Final window named "logs"
-- [ ] Command: `docker compose -p <project> logs -f`
-- [ ] Shows all service logs interleaved
+- [x] Final window named "logs"
+- [x] Command: `docker compose -p <project> logs -f`
+- [x] Shows all service logs interleaved
 
 ### 3.5 Attach Command
-- [ ] `piko attach <name>` — attach to session
-- [ ] If already in tmux: error with suggestion to use `switch`
-- [ ] If session doesn't exist: offer to run `piko up` first
-- [ ] Command: `tmux attach -t "piko/<project>/<name>"`
+- [x] `piko attach <name>` — attach to session
+- [x] If already in tmux: error with suggestion to use `switch`
+- [x] If session doesn't exist: offer to run `piko up` first
+- [x] Command: `tmux attach -t "piko/<project>/<name>"`
 
 ### 3.6 Switch Command
-- [ ] `piko switch <name>` — switch session (must be in tmux)
-- [ ] If not in tmux: error with suggestion to use `attach`
-- [ ] Command: `tmux switch-client -t "piko/<project>/<name>"`
+- [x] `piko switch <name>` — switch session (must be in tmux)
+- [x] If not in tmux: error with suggestion to use `attach`
+- [x] Command: `tmux switch-client -t "piko/<project>/<name>"`
 
 ### 3.7 Pick Command
-- [ ] `piko pick` — fuzzy picker for sessions
-- [ ] Requires fzf
-- [ ] Lists all piko sessions
-- [ ] Attaches/switches to selected
+- [x] `piko pick` — fuzzy picker for sessions
+- [x] Requires fzf
+- [x] Lists all piko sessions
+- [x] Attaches/switches to selected
 
 ### 3.8 Session Cleanup
-- [ ] On `piko down`: keep session (user might want shell)
-- [ ] On `piko destroy`: kill session
-- [ ] Command: `tmux kill-session -t "piko/<project>/<name>"`
+- [x] On `piko down`: keep session (user might want shell)
+- [x] On `piko destroy`: kill session
+- [x] Command: `tmux kill-session -t "piko/<project>/<name>"`
 
 ### 3.9 Integrate with Create
-- [ ] After containers start, create session
-- [ ] After session created, attach (unless `--no-attach` flag)
+- [x] After containers start, create session
+- [x] After session created, attach (unless `--no-attach` flag)
 
 ## Test Cases
 
@@ -97,11 +97,11 @@ $ piko attach feature-auth   # from outside tmux
 
 ## Definition of Done
 
-- [ ] `piko create` creates tmux session
-- [ ] Session has shell window at worktree
-- [ ] Session has window per service with correct shell
-- [ ] Session has logs window
-- [ ] `piko attach` works from outside tmux
-- [ ] `piko switch` works from inside tmux
-- [ ] `piko pick` works with fzf
-- [ ] `piko destroy` kills session
+- [x] `piko create` creates tmux session
+- [x] Session has shell window at worktree
+- [x] Session has window per service with correct shell
+- [x] Session has logs window
+- [x] `piko attach` works from outside tmux
+- [x] `piko switch` works from inside tmux
+- [x] `piko pick` works with fzf
+- [x] `piko destroy` kills session

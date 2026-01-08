@@ -37,6 +37,7 @@ func (s *Server) Start() error {
 
 	mux.HandleFunc("GET /api/project", s.handleGetProject)
 	mux.HandleFunc("GET /api/environments", s.handleListEnvironments)
+	mux.HandleFunc("GET /api/environments/{name}", s.handleGetEnvironment)
 	mux.HandleFunc("POST /api/environments", s.handleCreateEnvironment)
 	mux.HandleFunc("POST /api/environments/{name}/open", s.handleOpenInEditor)
 	mux.HandleFunc("POST /api/environments/{name}/up", s.handleUp)

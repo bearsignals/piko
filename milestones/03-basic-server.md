@@ -23,11 +23,11 @@ $ piko server
 ## Tasks
 
 ### 3.1 HTTP Server
-- [ ] Create server on port 19876
-- [ ] `piko server` command
-- [ ] `piko server --port 8080` — custom port
-- [ ] Graceful shutdown on Ctrl+C
-- [ ] Print URL on startup
+- [x] Create server on port 19876
+- [x] `piko server` command
+- [x] `piko server --port 8080` — custom port
+- [x] Graceful shutdown on Ctrl+C
+- [x] Print URL on startup
 
 ### 3.2 API Endpoints
 ```
@@ -46,39 +46,39 @@ POST /api/environments/:name/open
 ```
 
 ### 3.3 Create from Browser
-- [ ] POST /api/environments creates new environment
-- [ ] Calls same logic as `piko create`
-- [ ] Returns success/error
-- [ ] UI shows progress/result
+- [x] POST /api/environments creates new environment
+- [x] Calls same logic as `piko create`
+- [x] Returns success/error
+- [x] UI shows progress/result
 
 ### 3.4 Open in Cursor
-- [ ] POST /api/environments/:name/open
-- [ ] Runs: `cursor <worktree-path>`
-- [ ] Falls back: `code <path>`, `$EDITOR <path>`
-- [ ] Returns success/error
+- [x] POST /api/environments/:name/open
+- [x] Runs: `cursor <worktree-path>`
+- [x] Falls back: `code <path>`, `$EDITOR <path>`
+- [x] Returns success/error
 
 ### 3.5 Static UI
-- [ ] Single HTML file with embedded CSS/JS
-- [ ] No build step, no npm
-- [ ] Vanilla JS (fetch API)
-- [ ] Embed in Go binary using `embed` package
+- [x] Single HTML file with embedded CSS/JS
+- [x] No build step, no npm
+- [x] Vanilla JS (fetch API)
+- [x] Embed in Go binary using `embed` package
 
 ### 3.6 UI Components
-- [ ] Project header with name
-- [ ] Environment list:
+- [x] Project header with name
+- [x] Environment list:
   - Name, status indicator (●/○)
   - Branch name
   - "Open in Cursor" button
-- [ ] "Create New" button/form:
+- [x] "Create New" button/form:
   - Name input
   - Branch input (optional, defaults to name)
   - Submit button
-- [ ] Simple error display
+- [x] Simple error display
 
 ### 3.7 Embed in Binary
-- [ ] Use `//go:embed` directive
-- [ ] Serve from embedded filesystem
-- [ ] Single binary, no external files
+- [x] Use `//go:embed` directive
+- [x] Serve from embedded filesystem
+- [x] Single binary, no external files
 
 ## UI Mockup
 
@@ -138,11 +138,11 @@ Create New Dialog:
 
 ## Definition of Done
 
-- [ ] `piko server` starts HTTP server
-- [ ] API returns project and environment data
-- [ ] API can create new environments
-- [ ] API can trigger "Open in Cursor"
-- [ ] UI shows all environments
-- [ ] UI has "Create New" form
-- [ ] UI has "Open in Cursor" button
-- [ ] Single binary (no external files)
+- [x] `piko server` starts HTTP server
+- [x] API returns project and environment data
+- [x] API can create new environments
+- [x] API can trigger "Open in Cursor"
+- [x] UI shows all environments
+- [x] UI has "Create New" form
+- [x] UI has "Open in Cursor" button
+- [x] Single binary (no external files)

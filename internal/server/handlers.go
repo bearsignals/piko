@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/gwuah/piko/internal/config"
 	"github.com/gwuah/piko/internal/docker"
@@ -21,11 +22,28 @@ type ProjectResponse struct {
 	Initialized bool   `json:"initialized"`
 }
 
-type EnvironmentResponse struct {
+type PortMapping struct {
+	Service       string `json:"service"`
+	ContainerPort int    `json:"containerPort"`
+	HostPort      int    `json:"hostPort"`
+	URL           string `json:"url,omitempty"`
+}
+
+type ContainerInfo struct {
 	Name   string `json:"name"`
-	Status string `json:"status"`
-	Branch string `json:"branch"`
-	Path   string `json:"path"`
+	State  string `json:"state"`
+	Health string `json:"health,omitempty"`
+}
+
+type EnvironmentResponse struct {
+	Name       string          `json:"name"`
+	Status     string          `json:"status"`
+	Branch     string          `json:"branch"`
+	Path       string          `json:"path"`
+	Ports      []PortMapping   `json:"ports,omitempty"`
+	Containers []ContainerInfo `json:"containers,omitempty"`
+	Running    int             `json:"running"`
+	Total      int             `json:"total"`
 }
 
 type CreateRequest struct {
@@ -73,15 +91,136 @@ func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) 
 			composeDir = filepath.Join(e.Path, project.ComposeDir)
 		}
 		status := docker.GetProjectStatus(composeDir, e.DockerProject)
+
+		portMappings, containers, running, total := s.getEnvironmentDetails(composeDir, e.DockerProject)
+
 		response = append(response, EnvironmentResponse{
-			Name:   e.Name,
-			Status: string(status),
-			Branch: e.Branch,
-			Path:   e.Path,
+			Name:       e.Name,
+			Status:     string(status),
+			Branch:     e.Branch,
+			Path:       e.Path,
+			Ports:      portMappings,
+			Containers: containers,
+			Running:    running,
+			Total:      total,
 		})
 	}
 
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleGetEnvironment(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+
+	project, err := s.db.GetProject()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	environment, err := s.db.GetEnvironmentByName(name)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
+		return
+	}
+
+	composeDir := environment.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	}
+
+	status := docker.GetProjectStatus(composeDir, environment.DockerProject)
+	portMappings, containers, running, total := s.getEnvironmentDetails(composeDir, environment.DockerProject)
+
+	writeJSON(w, http.StatusOK, EnvironmentResponse{
+		Name:       environment.Name,
+		Status:     string(status),
+		Branch:     environment.Branch,
+		Path:       environment.Path,
+		Ports:      portMappings,
+		Containers: containers,
+		Running:    running,
+		Total:      total,
+	})
+}
+
+func (s *Server) getEnvironmentDetails(composeDir, dockerProject string) ([]PortMapping, []ContainerInfo, int, int) {
+	var portMappings []PortMapping
+	var containers []ContainerInfo
+	running := 0
+	total := 0
+
+	cmd := exec.Command("docker", "compose", "-p", dockerProject, "ps", "--format", "json")
+	cmd.Dir = composeDir
+	output, err := cmd.Output()
+	if err != nil {
+		return portMappings, containers, running, total
+	}
+
+	seenPorts := make(map[string]bool)
+
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line == "" {
+			continue
+		}
+		var c struct {
+			Service    string `json:"Service"`
+			Name       string `json:"Name"`
+			State      string `json:"State"`
+			Health     string `json:"Health"`
+			Publishers []struct {
+				TargetPort    int `json:"TargetPort"`
+				PublishedPort int `json:"PublishedPort"`
+			} `json:"Publishers"`
+		}
+		if err := json.Unmarshal([]byte(line), &c); err != nil {
+			continue
+		}
+
+		total++
+		if c.State == "running" {
+			running++
+		}
+
+		containers = append(containers, ContainerInfo{
+			Name:   c.Name,
+			State:  c.State,
+			Health: c.Health,
+		})
+
+		for _, pub := range c.Publishers {
+			if pub.PublishedPort == 0 {
+				continue
+			}
+			key := fmt.Sprintf("%s:%d", c.Service, pub.TargetPort)
+			if seenPorts[key] {
+				continue
+			}
+			seenPorts[key] = true
+
+			pm := PortMapping{
+				Service:       c.Service,
+				ContainerPort: pub.TargetPort,
+				HostPort:      pub.PublishedPort,
+			}
+			if isHTTPPort(pub.TargetPort) {
+				pm.URL = fmt.Sprintf("http://localhost:%d", pub.PublishedPort)
+			}
+			portMappings = append(portMappings, pm)
+		}
+	}
+
+	return portMappings, containers, running, total
+}
+
+func isHTTPPort(port int) bool {
+	httpPorts := []int{80, 443, 3000, 3001, 4000, 5000, 5173, 8000, 8080, 8081, 8888, 9000}
+	for _, p := range httpPorts {
+		if port == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request) {

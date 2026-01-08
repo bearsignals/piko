@@ -19,20 +19,20 @@
 
 ## Milestone Summary
 
-| # | Milestone | Priority | Effort | Delivers |
-|---|-----------|----------|--------|----------|
-| 1 | Init & Create | Critical | Medium | `piko init`, `piko create`, `piko env`, setup script |
-| 2 | Lifecycle | Critical | Small | `up`, `down`, `destroy`, `list`, destroy script |
-| 3 | Basic Server | High | Small | HTTP server, list, create from browser, open in Cursor |
-| 4 | Tmux Integration | High | Medium | Sessions, attach, switch |
-| 5 | Inspection | High | Small | `piko run`, `logs`, `status`, `open` |
-| 6 | Full Web UI | Medium | Medium | Ports display, start/stop, logs in browser |
-| 7 | Shared Services | Low | Medium | Cross-environment service sharing |
-| 8 | Configuration | Low | Small | shells, windows, ignore, user config |
+| # | Milestone | Priority | Effort | Status | Delivers |
+|---|-----------|----------|--------|--------|----------|
+| 1 | Init & Create | Critical | Medium | ✅ Done | `piko init`, `piko create`, `piko env`, setup script |
+| 2 | Lifecycle | Critical | Small | ✅ Done | `up`, `down`, `destroy`, `list`, destroy script |
+| 3 | Basic Server | High | Small | ✅ Done | HTTP server, list, create from browser, open in Cursor |
+| 4 | Tmux Integration | High | Medium | ✅ Done | Sessions, attach, switch, pick |
+| 5 | Inspection | High | Small | ✅ Done | `piko run`, `logs`, `status`, `open`, `edit`, `exec`, `shell` |
+| 6 | Full Web UI | Medium | Medium | 🔶 Partial | Ports display, start/stop, logs in browser (logs deferred) |
+| 7 | Shared Services | Low | Medium | 🔲 Planned | Cross-environment service sharing |
+| 8 | Configuration | Low | Small | 🔲 Planned | shells, windows, ignore, user config |
 
 ## Success Definition
 
-**MVP (M1-M5 complete):**
+**MVP (M1-M5 complete): ✅ ACHIEVED**
 ```bash
 # Initialize project
 $ cd ~/projects/myapp

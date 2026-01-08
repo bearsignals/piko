@@ -38,9 +38,9 @@ worktrees/feature-auth/
 ## Tasks
 
 ### 1.1 Project Structure
-- [ ] Initialize Go module
-- [ ] Set up CLI with Cobra
-- [ ] Create package structure:
+- [x] Initialize Go module
+- [x] Set up CLI with Cobra
+- [x] Create package structure:
   ```
   cmd/piko/main.go
   internal/
@@ -51,21 +51,21 @@ worktrees/feature-auth/
   ```
 
 ### 1.2 Init Command
-- [ ] `piko init` — initialize project for piko
-- [ ] Validate current directory:
+- [x] `piko init` — initialize project for piko
+- [x] Validate current directory:
   - Is a git repo (has `.git/`)
   - Has `docker-compose.yml` (or `docker-compose.yaml`, `compose.yml`)
-- [ ] Create `.piko/` directory
-- [ ] Initialize SQLite database at `.piko/state.db`
-- [ ] Insert project record:
+- [x] Create `.piko/` directory
+- [x] Initialize SQLite database at `.piko/state.db`
+- [x] Insert project record:
   - name (from directory name)
   - root_path (absolute path)
   - compose_file (detected filename)
-- [ ] Add `.piko/` to `.gitignore` if not already present
-- [ ] Error if already initialized (suggest `piko status`)
+- [x] Add `.piko/` to `.gitignore` if not already present
+- [x] Error if already initialized (suggest `piko status`)
 
 ### 1.3 SQLite Schema
-- [ ] Create tables:
+- [x] Create tables:
   ```sql
   CREATE TABLE project (
       id INTEGER PRIMARY KEY,
@@ -87,30 +87,30 @@ worktrees/feature-auth/
       UNIQUE(project_id, name)
   );
   ```
-- [ ] Functions: `GetProject`, `InsertEnvironment`, `GetEnvironment`, `ListEnvironments`
+- [x] Functions: `GetProject`, `InsertEnvironment`, `GetEnvironment`, `ListEnvironments`
 
 ### 1.4 Config Loading
-- [ ] Load `.piko.yml` from project root (if exists)
-- [ ] Parse YAML into config struct
-- [ ] Used by create command for scripts.setup
-- [ ] Missing file is not an error (scripts are optional)
+- [x] Load `.piko.yml` from project root (if exists)
+- [x] Parse YAML into config struct
+- [x] Used by create command for scripts.setup
+- [x] Missing file is not an error (scripts are optional)
 
 ### 1.5 Create Command
-- [ ] `piko create <name>` — create new environment
-- [ ] Validate project is initialized (`.piko/state.db` exists)
-- [ ] Validate name not already used
+- [x] `piko create <name>` — create new environment
+- [x] Validate project is initialized (`.piko/state.db` exists)
+- [x] Validate name not already used
 
 ### 1.6 Git Worktree
-- [ ] Create `.piko/worktrees/` directory if needed
-- [ ] Run `git worktree add .piko/worktrees/<name> -b <name>`
-- [ ] Handle existing branch case (`--branch` flag to use existing)
-- [ ] Validate worktree was created
+- [x] Create `.piko/worktrees/` directory if needed
+- [x] Run `git worktree add .piko/worktrees/<name> -b <name>`
+- [x] Handle existing branch case (`--branch` flag to use existing)
+- [x] Validate worktree was created
 
 ### 1.7 Port Allocation
-- [ ] Assign worktree ID (auto-increment from SQLite)
-- [ ] Calculate base port: `10000 + (worktree_id * 100)`
-- [ ] For each service port: `base + (original_port % 100)`
-- [ ] Example (worktree_id=1, base=10100):
+- [x] Assign worktree ID (auto-increment from SQLite)
+- [x] Calculate base port: `10000 + (worktree_id * 100)`
+- [x] For each service port: `base + (original_port % 100)`
+- [x] Example (worktree_id=1, base=10100):
   ```
   db:5432      → 10132
   jaeger:4318  → 10118
@@ -119,46 +119,46 @@ worktrees/feature-auth/
   ```
 
 ### 1.8 Compose Override Generation
-- [ ] Run `docker compose config --format json` in worktree directory
-- [ ] Parse JSON to extract services and their ports
-- [ ] Generate `docker-compose.piko.yml`:
+- [x] Run `docker compose config --format json` in worktree directory
+- [x] Parse JSON to extract services and their ports
+- [x] Generate `docker-compose.piko.yml`:
   - Set deterministic host ports (from 1.7)
   - Set network name to `piko-<project>-<name>`
   - Namespace volumes: `piko-<project>-<name>-<volume>`
-- [ ] Write file to worktree directory
+- [x] Write file to worktree directory
 
 ### 1.9 Start Containers
-- [ ] Run from worktree directory:
+- [x] Run from worktree directory:
   ```bash
   docker compose -p piko-<project>-<name> \
     -f docker-compose.yml \
     -f docker-compose.piko.yml \
     up -d
   ```
-- [ ] Capture and display output
-- [ ] Handle errors (compose failure, port conflicts)
+- [x] Capture and display output
+- [x] Handle errors (compose failure, port conflicts)
 
 ### 1.10 Run Setup Script
-- [ ] If `scripts.setup` is defined in `.piko.yml`:
+- [x] If `scripts.setup` is defined in `.piko.yml`:
   - Export PIKO_* environment variables
   - cd to worktree directory
   - Execute script via shell
-- [ ] Common setup tasks (handled by user's script):
+- [x] Common setup tasks (handled by user's script):
   - Symlink env files: `ln -s "$PIKO_ROOT/.env.local" .env.local`
   - Install dependencies: `go mod download`, `npm install`
   - Run migrations: `make migrate`
-- [ ] Capture output, fail create if script fails
+- [x] Capture output, fail create if script fails
 
 ### 1.11 Record State
-- [ ] Insert environment into SQLite:
+- [x] Insert environment into SQLite:
   - id (auto-increment, used for port allocation)
   - name, branch, path, docker_project, created_at
-- [ ] tmux_session field left empty (M4)
+- [x] tmux_session field left empty (M4)
 
 ### 1.12 Env Command
-- [ ] `piko env <name>` — print all PIKO_* variables
-- [ ] `piko env <name> --json` — JSON output
-- [ ] Variables:
+- [x] `piko env <name>` — print all PIKO_* variables
+- [x] `piko env <name> --json` — JSON output
+- [x] Variables:
   ```bash
   PIKO_ROOT=/home/user/project
   PIKO_ENV_NAME=feature-auth
@@ -168,8 +168,8 @@ worktrees/feature-auth/
   PIKO_DB_PORT=10132
   PIKO_APP_PORT=10180
   ```
-- [ ] Service names uppercased, hyphens → underscores
-- [ ] Discover ports via `docker compose -p <project> port <service> <port>`
+- [x] Service names uppercased, hyphens → underscores
+- [x] Discover ports via `docker compose -p <project> port <service> <port>`
 
 ## Non-Goals (Deferred)
 
@@ -195,17 +195,17 @@ worktrees/feature-auth/
 
 ## Definition of Done
 
-- [ ] `piko init` creates .piko directory
-- [ ] `piko init` creates SQLite database with schema
-- [ ] `piko init` records project
-- [ ] `piko init` adds .piko to .gitignore
-- [ ] `piko create <name>` requires init first
-- [ ] `piko create <name>` creates worktree
-- [ ] `piko create <name>` generates override file
-- [ ] `piko create <name>` starts containers
-- [ ] `piko create <name>` runs setup script (if defined)
-- [ ] `piko create <name>` records to SQLite
-- [ ] Containers have isolated network
-- [ ] Containers have deterministic host ports
-- [ ] `piko env <name>` outputs PIKO_* variables
-- [ ] Running create twice with same name shows error
+- [x] `piko init` creates .piko directory
+- [x] `piko init` creates SQLite database with schema
+- [x] `piko init` records project
+- [x] `piko init` adds .piko to .gitignore
+- [x] `piko create <name>` requires init first
+- [x] `piko create <name>` creates worktree
+- [x] `piko create <name>` generates override file
+- [x] `piko create <name>` starts containers
+- [x] `piko create <name>` runs setup script (if defined)
+- [x] `piko create <name>` records to SQLite
+- [x] Containers have isolated network
+- [x] Containers have deterministic host ports
+- [x] `piko env <name>` outputs PIKO_* variables
+- [x] Running create twice with same name shows error

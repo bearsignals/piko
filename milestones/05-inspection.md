@@ -55,55 +55,55 @@ $ piko edit feature-auth
 ## Tasks
 
 ### 4.1 Run Command
-- [ ] `piko run <name>` — execute the run script
-- [ ] Validate environment exists and containers are running
-- [ ] If containers stopped, offer to start them first
-- [ ] Load `.piko.yml` from project root
-- [ ] If `scripts.run` is not defined: error with helpful message
-- [ ] Export PIKO_* environment variables
-- [ ] cd to worktree directory
-- [ ] Execute script via shell, stream output to terminal
-- [ ] Pass through signals (Ctrl+C)
+- [x] `piko run <name>` — execute the run script
+- [x] Validate environment exists and containers are running
+- [x] If containers stopped, offer to start them first
+- [x] Load `.piko.yml` from project root
+- [x] If `scripts.run` is not defined: error with helpful message
+- [x] Export PIKO_* environment variables
+- [x] cd to worktree directory
+- [x] Execute script via shell, stream output to terminal
+- [x] Pass through signals (Ctrl+C)
 
 ### 4.2 Status Command
-- [ ] Show environment metadata from database
-- [ ] Show container status from Docker
-- [ ] Show health check status if available
-- [ ] Calculate "running X/Y containers"
-- [ ] Show port mappings inline
+- [x] Show environment metadata from database
+- [x] Show container status from Docker
+- [x] Show health check status if available
+- [x] Calculate "running X/Y containers"
+- [x] Show port mappings inline
 
 ### 4.3 Open Command
-- [ ] `piko open <name>` — open first HTTP service
-- [ ] `piko open <name> <service>` — open specific service
-- [ ] Discover port via `docker compose port`
-- [ ] Open URL with system browser:
+- [x] `piko open <name>` — open first HTTP service
+- [x] `piko open <name> <service>` — open specific service
+- [x] Discover port via `docker compose port`
+- [x] Open URL with system browser:
   - macOS: `open`
   - Linux: `xdg-open`
-- [ ] Error if service has no exposed ports
+- [x] Error if service has no exposed ports
 
 ### 4.4 Logs Command
-- [ ] `piko logs <name>` — all services
-- [ ] `piko logs <name> <service>` — specific service
-- [ ] `-f` flag for follow mode
-- [ ] `--tail N` flag for last N lines
-- [ ] Proxy to `docker compose logs`
+- [x] `piko logs <name>` — all services
+- [x] `piko logs <name> <service>` — specific service
+- [x] `-f` flag for follow mode
+- [x] `--tail N` flag for last N lines
+- [x] Proxy to `docker compose logs`
 
 ### 4.5 Edit Command
-- [ ] `piko edit <name>` — open worktree in editor
-- [ ] Detect editor: `$EDITOR`, then `cursor`, then `code`
-- [ ] Run: `cursor <worktree-path>`
+- [x] `piko edit <name>` — open worktree in editor
+- [x] Detect editor: `$EDITOR`, then `cursor`, then `code`
+- [x] Run: `cursor <worktree-path>`
 - [ ] `piko edit --all` — open workspace with all worktrees (future)
 
 ### 4.6 Exec Command
-- [ ] `piko exec <name> <service> [cmd]`
-- [ ] Default cmd: detected shell for service
-- [ ] Proxy to `docker compose exec`
-- [ ] Interactive by default
+- [x] `piko exec <name> <service> [cmd]`
+- [x] Default cmd: detected shell for service
+- [x] Proxy to `docker compose exec`
+- [x] Interactive by default
 
 ### 4.7 Shell Command
-- [ ] `piko shell <name> <service>`
-- [ ] Shortcut for `piko exec <name> <service>` with detected shell
-- [ ] Always interactive
+- [x] `piko shell <name> <service>`
+- [x] Shortcut for `piko exec <name> <service>` with detected shell
+- [x] Always interactive
 
 ## Port Discovery
 
@@ -131,11 +131,11 @@ func getPortMappings(project string) ([]PortMapping, error) {
 
 ## Definition of Done
 
-- [ ] `piko run <name>` executes run script with PIKO_* vars
-- [ ] `piko status <name>` shows detailed status
-- [ ] `piko open <name>` opens browser
-- [ ] `piko logs <name>` shows logs
-- [ ] `piko logs <name> -f` follows logs
-- [ ] `piko edit <name>` opens editor
-- [ ] `piko exec <name> <service>` runs command
-- [ ] `piko shell <name> <service>` opens shell
+- [x] `piko run <name>` executes run script with PIKO_* vars
+- [x] `piko status <name>` shows detailed status
+- [x] `piko open <name>` opens browser
+- [x] `piko logs <name>` shows logs
+- [x] `piko logs <name> -f` follows logs
+- [x] `piko edit <name>` opens editor
+- [x] `piko exec <name> <service>` runs command
+- [x] `piko shell <name> <service>` opens shell

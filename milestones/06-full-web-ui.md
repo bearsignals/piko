@@ -54,16 +54,16 @@ GET  /api/environments/:name/logs?follow=true
 ```
 
 ### 6.2 Port Display
-- [ ] Fetch port mappings from Docker
-- [ ] Display in environment cards
-- [ ] Clickable URLs for HTTP ports
-- [ ] Copy-to-clipboard for connection strings
+- [x] Fetch port mappings from Docker
+- [x] Display in environment cards
+- [x] Clickable URLs for HTTP ports
+- [x] Copy-to-clipboard for connection strings
 
 ### 6.3 Start/Stop Controls
-- [ ] "Start" button for stopped environments
-- [ ] "Stop" button for running environments
-- [ ] Show loading state during operation
-- [ ] Update status after completion
+- [x] "Start" button for stopped environments
+- [x] "Stop" button for running environments
+- [x] Show loading state during operation
+- [x] Update status after completion
 
 ### 6.4 Logs Streaming
 - [ ] SSE endpoint for log streaming
@@ -73,13 +73,13 @@ GET  /api/environments/:name/logs?follow=true
 - [ ] Stop/disconnect button
 
 ### 6.5 Auto-Refresh
-- [ ] Poll every 5 seconds for status updates
+- [x] Poll every 5 seconds for status updates
 - [ ] Or: SSE for real-time updates
-- [ ] Manual refresh button
-- [ ] Show "last updated" timestamp
+- [x] Manual refresh button
+- [x] Show "last updated" timestamp
 
 ### 6.6 Enhanced UI Components
-- [ ] Environment cards with ports:
+- [x] Environment cards with ports:
   ```
   ● feature-auth                              running
     branch: feature-auth
@@ -90,8 +90,8 @@ GET  /api/environments/:name/logs?follow=true
 
     [Open in Cursor]  [Logs]  [Stop]
   ```
-- [ ] Status indicators with health info
-- [ ] Container-level status (X/Y healthy)
+- [x] Status indicators with health info
+- [x] Container-level status (X/Y healthy)
 
 ## UI Mockup
 
@@ -137,11 +137,11 @@ GET  /api/environments/:name/logs?follow=true
 
 ## Definition of Done
 
-- [ ] Ports displayed per environment
-- [ ] HTTP ports are clickable links
-- [ ] Copy-to-clipboard for connection strings
-- [ ] Start/Stop buttons work
-- [ ] Logs viewable in browser
-- [ ] Logs streaming via SSE
-- [ ] Auto-refresh works
-- [ ] Health status shown
+- [x] Ports displayed per environment
+- [x] HTTP ports are clickable links
+- [x] Copy-to-clipboard for connection strings
+- [x] Start/Stop buttons work
+- [ ] Logs viewable in browser (deferred)
+- [ ] Logs streaming via SSE (deferred)
+- [x] Auto-refresh works
+- [x] Health status shown

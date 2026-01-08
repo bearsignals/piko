@@ -24,6 +24,11 @@
             border-bottom: 1px solid #2a2a2a;
             background: #1a1a1a;
         }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
         .logo {
             font-size: 1.5rem;
             font-weight: 600;
@@ -32,6 +37,36 @@
         .project-name {
             color: #888;
             font-size: 0.9rem;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .last-updated {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        .refresh-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #888;
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .refresh-btn:hover {
+            border-color: #555;
+            color: #fff;
+        }
+        .refresh-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         main {
             max-width: 800px;
@@ -113,10 +148,63 @@
         .env-actions {
             display: flex;
             gap: 0.5rem;
+            flex-wrap: wrap;
         }
         .status-text {
             font-size: 0.8rem;
             color: #888;
+        }
+        .status-text.healthy {
+            color: #22c55e;
+        }
+        .status-text.partial {
+            color: #f59e0b;
+        }
+        .ports-section {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #2a2a2a;
+        }
+        .ports-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .port-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+        .port-service {
+            color: #888;
+            min-width: 80px;
+        }
+        .port-url {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+        .port-url:hover {
+            text-decoration: underline;
+        }
+        .port-address {
+            color: #aaa;
+        }
+        .copy-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 0.2rem;
+            font-size: 0.75rem;
+            transition: color 0.2s;
+        }
+        .copy-btn:hover {
+            color: #fff;
+        }
+        .copy-btn.copied {
+            color: #22c55e;
         }
         .modal-overlay {
             position: fixed;
@@ -213,8 +301,14 @@
 </head>
 <body>
     <header>
-        <span class="logo">piko</span>
-        <span class="project-name" id="project-name"></span>
+        <div class="header-left">
+            <span class="logo">piko</span>
+            <span class="project-name" id="project-name"></span>
+        </div>
+        <div class="header-right">
+            <span class="last-updated" id="last-updated"></span>
+            <button class="refresh-btn" onclick="refresh()" title="Refresh">↻</button>
+        </div>
     </header>
     <main>
         <div id="error" class="error hidden"></div>
@@ -253,6 +347,8 @@
     </div>
 
     <script>
+        let lastUpdated = null;
+
         async function loadProject() {
             try {
                 const res = await fetch('/api/project');
@@ -270,9 +366,74 @@
                 const res = await fetch('/api/environments');
                 const environments = await res.json();
                 renderEnvironments(environments);
+                lastUpdated = new Date();
+                updateLastUpdated();
             } catch (err) {
                 showError('Failed to load environments');
             }
+        }
+
+        function updateLastUpdated() {
+            if (!lastUpdated) return;
+            const el = document.getElementById('last-updated');
+            const seconds = Math.floor((new Date() - lastUpdated) / 1000);
+            if (seconds < 5) {
+                el.textContent = 'Updated just now';
+            } else if (seconds < 60) {
+                el.textContent = `Updated ${seconds}s ago`;
+            } else {
+                el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
+            }
+        }
+
+        async function refresh() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.classList.add('spinning');
+            await loadEnvironments();
+            setTimeout(() => btn.classList.remove('spinning'), 500);
+        }
+
+        function getStatusText(env) {
+            if (env.total === 0) {
+                return { text: env.status, class: '' };
+            }
+            if (env.running === env.total) {
+                return { text: `running (${env.running}/${env.total})`, class: 'healthy' };
+            }
+            if (env.running === 0) {
+                return { text: 'stopped', class: '' };
+            }
+            return { text: `partial (${env.running}/${env.total})`, class: 'partial' };
+        }
+
+        function renderPorts(ports) {
+            if (!ports || ports.length === 0) return '';
+
+            const portItems = ports.map(p => {
+                const address = `localhost:${p.hostPort}`;
+                if (p.url) {
+                    return `
+                        <div class="port-item">
+                            <span class="port-service">${p.service}</span>
+                            <a href="${p.url}" target="_blank" class="port-url">${p.url}</a>
+                            <button class="copy-btn" onclick="copyToClipboard('${p.url}', this)" title="Copy URL">copy</button>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="port-item">
+                        <span class="port-service">${p.service}</span>
+                        <span class="port-address">${address}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${address}', this)" title="Copy address">copy</button>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="ports-section">
+                    <div class="ports-list">${portItems}</div>
+                </div>
+            `;
         }
 
         function renderEnvironments(environments) {
@@ -286,25 +447,43 @@
             }
 
             empty.classList.add('hidden');
-            list.innerHTML = environments.map(env => `
-                <div class="env-card">
-                    <div class="env-header">
-                        <div class="env-name">
-                            <span class="status-dot ${env.status}"></span>
-                            ${env.name}
+            list.innerHTML = environments.map(env => {
+                const statusInfo = getStatusText(env);
+                return `
+                    <div class="env-card">
+                        <div class="env-header">
+                            <div class="env-name">
+                                <span class="status-dot ${env.status}"></span>
+                                ${env.name}
+                            </div>
+                            <span class="status-text ${statusInfo.class}">${statusInfo.text}</span>
                         </div>
-                        <span class="status-text">${env.status}</span>
+                        <div class="env-branch">branch: ${env.branch}</div>
+                        ${renderPorts(env.ports)}
+                        <div class="env-actions" style="margin-top: 0.75rem;">
+                            <button class="btn btn-small" onclick="openInEditor('${env.name}')">Open in Cursor</button>
+                            ${env.status === 'running'
+                                ? `<button class="btn btn-small btn-secondary" onclick="stopEnv('${env.name}')">Stop</button>`
+                                : `<button class="btn btn-small btn-secondary" onclick="startEnv('${env.name}')">Start</button>`
+                            }
+                        </div>
                     </div>
-                    <div class="env-branch">branch: ${env.branch}</div>
-                    <div class="env-actions" style="margin-top: 0.75rem;">
-                        <button class="btn btn-small" onclick="openInEditor('${env.name}')">Open in Cursor</button>
-                        ${env.status === 'running'
-                            ? `<button class="btn btn-small btn-secondary" onclick="stopEnv('${env.name}')">Stop</button>`
-                            : `<button class="btn btn-small btn-secondary" onclick="startEnv('${env.name}')">Start</button>`
-                        }
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        async function copyToClipboard(text, btn) {
+            try {
+                await navigator.clipboard.writeText(text);
+                btn.classList.add('copied');
+                btn.textContent = 'copied!';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = 'copy';
+                }, 1500);
+            } catch (err) {
+                showError('Failed to copy to clipboard');
+            }
         }
 
         function showCreateModal() {
@@ -398,6 +577,7 @@
         loadProject();
         loadEnvironments();
         setInterval(loadEnvironments, 5000);
+        setInterval(updateLastUpdated, 1000);
     </script>
 </body>
 </html>
