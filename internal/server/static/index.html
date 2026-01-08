@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>piko</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #2a2a2a;
+            background: #1a1a1a;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .project-name {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .actions {
+            margin-bottom: 1.5rem;
+        }
+        .btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .btn:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #333;
+        }
+        .btn-secondary:hover {
+            background: #444;
+        }
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+        .env-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .env-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+        .env-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .env-name {
+            font-weight: 500;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .status-dot.running {
+            background: #22c55e;
+        }
+        .status-dot.stopped {
+            background: #666;
+        }
+        .status-dot.unknown {
+            background: #f59e0b;
+        }
+        .env-branch {
+            color: #888;
+            font-size: 0.85rem;
+        }
+        .env-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .status-text {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 400px;
+            max-width: 90%;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #0f0f0f;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .form-hint {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .error {
+            background: #7f1d1d;
+            border: 1px solid #991b1b;
+            color: #fca5a5;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="logo">piko</span>
+        <span class="project-name" id="project-name"></span>
+    </header>
+    <main>
+        <div id="error" class="error hidden"></div>
+        <div class="actions">
+            <button class="btn" onclick="showCreateModal()">+ Create New Environment</button>
+        </div>
+        <div id="env-list" class="env-list"></div>
+        <div id="empty-state" class="empty-state hidden">
+            <p>No environments yet.</p>
+            <p>Click "Create New Environment" to get started.</p>
+        </div>
+    </main>
+
+    <div id="create-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Create New Environment</span>
+                <button class="modal-close" onclick="hideCreateModal()">&times;</button>
+            </div>
+            <form id="create-form" onsubmit="createEnvironment(event)">
+                <div class="form-group">
+                    <label for="env-name">Name</label>
+                    <input type="text" id="env-name" required placeholder="feature-xyz">
+                </div>
+                <div class="form-group">
+                    <label for="env-branch">Branch (optional)</label>
+                    <input type="text" id="env-branch" placeholder="defaults to name">
+                    <div class="form-hint">Leave empty to create a new branch with the same name</div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideCreateModal()">Cancel</button>
+                    <button type="submit" class="btn" id="create-btn">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function loadProject() {
+            try {
+                const res = await fetch('/api/project');
+                const project = await res.json();
+                if (project.initialized) {
+                    document.getElementById('project-name').textContent = project.name;
+                }
+            } catch (err) {
+                showError('Failed to load project');
+            }
+        }
+
+        async function loadEnvironments() {
+            try {
+                const res = await fetch('/api/environments');
+                const environments = await res.json();
+                renderEnvironments(environments);
+            } catch (err) {
+                showError('Failed to load environments');
+            }
+        }
+
+        function renderEnvironments(environments) {
+            const list = document.getElementById('env-list');
+            const empty = document.getElementById('empty-state');
+
+            if (environments.length === 0) {
+                list.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            list.innerHTML = environments.map(env => `
+                <div class="env-card">
+                    <div class="env-header">
+                        <div class="env-name">
+                            <span class="status-dot ${env.status}"></span>
+                            ${env.name}
+                        </div>
+                        <span class="status-text">${env.status}</span>
+                    </div>
+                    <div class="env-branch">branch: ${env.branch}</div>
+                    <div class="env-actions" style="margin-top: 0.75rem;">
+                        <button class="btn btn-small" onclick="openInEditor('${env.name}')">Open in Cursor</button>
+                        ${env.status === 'running'
+                            ? `<button class="btn btn-small btn-secondary" onclick="stopEnv('${env.name}')">Stop</button>`
+                            : `<button class="btn btn-small btn-secondary" onclick="startEnv('${env.name}')">Start</button>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showCreateModal() {
+            document.getElementById('create-modal').classList.remove('hidden');
+            document.getElementById('env-name').focus();
+        }
+
+        function hideCreateModal() {
+            document.getElementById('create-modal').classList.add('hidden');
+            document.getElementById('create-form').reset();
+        }
+
+        async function createEnvironment(e) {
+            e.preventDefault();
+            const btn = document.getElementById('create-btn');
+            const name = document.getElementById('env-name').value;
+            const branch = document.getElementById('env-branch').value;
+
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const res = await fetch('/api/environments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, branch: branch || '' })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    hideCreateModal();
+                    loadEnvironments();
+                } else {
+                    showError(data.error || 'Failed to create environment');
+                }
+            } catch (err) {
+                showError('Failed to create environment');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create';
+            }
+        }
+
+        async function openInEditor(name) {
+            try {
+                const res = await fetch(`/api/environments/${name}/open`, { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) {
+                    showError(data.error || 'Failed to open editor');
+                }
+            } catch (err) {
+                showError('Failed to open editor');
+            }
+        }
+
+        async function startEnv(name) {
+            try {
+                const res = await fetch(`/api/environments/${name}/up`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    loadEnvironments();
+                } else {
+                    showError(data.error || 'Failed to start environment');
+                }
+            } catch (err) {
+                showError('Failed to start environment');
+            }
+        }
+
+        async function stopEnv(name) {
+            try {
+                const res = await fetch(`/api/environments/${name}/down`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    loadEnvironments();
+                } else {
+                    showError(data.error || 'Failed to stop environment');
+                }
+            } catch (err) {
+                showError('Failed to stop environment');
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+
+        loadProject();
+        loadEnvironments();
+        setInterval(loadEnvironments, 5000);
+    </script>
+</body>
+</html>
