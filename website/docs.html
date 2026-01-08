@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Piko | Documentation</title>
+    <meta
+      name="description"
+      content="Documentation for Piko - isolated development environments using Git worktrees, tmux, and Docker."
+    />
+    <style>
+      :root {
+        --bg-color: #0a0a0a;
+        --text-main: #ededed;
+        --text-muted: #888888;
+        --accent: #00ff9d;
+        --border: rgba(255, 255, 255, 0.1);
+        --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        --font-mono: "JetBrains Mono", "Fira Code", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        font-family: var(--font-sans);
+        line-height: 1.7;
+        min-height: 100vh;
+      }
+
+      .grid-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        z-index: -1;
+      }
+
+      nav {
+        position: sticky;
+        top: 0;
+        background: rgba(10, 10, 10, 0.9);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+        padding: 1rem 2rem;
+        z-index: 100;
+      }
+
+      nav .inner {
+        max-width: 680px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      nav a {
+        color: var(--text-main);
+        text-decoration: none;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+      }
+
+      nav a:hover {
+        color: var(--accent);
+      }
+
+      nav .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+      }
+
+      nav .logo-mark {
+        width: 8px;
+        height: 8px;
+        background-color: var(--accent);
+        border-radius: 50%;
+      }
+
+      .container {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 3rem 2rem 4rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 2rem;
+      }
+
+      h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 3rem 0 1rem;
+      }
+
+      p {
+        color: var(--text-muted);
+        margin-bottom: 1.25rem;
+        font-size: 0.95rem;
+      }
+
+      p strong {
+        color: var(--text-main);
+        font-weight: 500;
+      }
+
+      code {
+        font-family: var(--font-mono);
+        font-size: 0.85em;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.15em 0.4em;
+        border-radius: 3px;
+      }
+
+      pre {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1.25rem 1.5rem;
+        overflow-x: auto;
+        margin: 1.5rem 0;
+      }
+
+      pre code {
+        background: none;
+        padding: 0;
+      }
+
+      pre .comment {
+        color: var(--text-muted);
+      }
+
+      pre .arg {
+        color: var(--accent);
+      }
+
+      footer {
+        padding: 2rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.2);
+        font-size: 0.8rem;
+        font-family: var(--font-mono);
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+
+    <nav>
+      <div class="inner">
+        <a href="index.html" class="logo">
+          <span class="logo-mark"></span>
+          piko
+        </a>
+        <a href="https://github.com/bearsignals/piko">GitHub</a>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>How Piko Works</h1>
+
+      <p>
+        Piko creates isolated development environments by combining three tools
+        you already know: <strong>Git worktrees</strong> for code isolation,
+        <strong>tmux</strong> for terminal sessions, and optionally
+        <strong>Docker</strong> for container orchestration.
+      </p>
+
+      <p>
+        Each environment gets its own branch, its own directory, its own
+        containers, and its own ports. No conflicts between environments.
+      </p>
+
+      <h2>Getting Started</h2>
+
+      <pre><code>go install github.com/bearsignals/piko@latest
+
+cd ~/projects/myapp
+piko init
+piko create <span class="arg">feature-auth</span></code></pre>
+
+      <p>
+        That's it. You're now in a tmux session with your worktree, containers
+        running, and everything isolated. When you're done:
+      </p>
+
+      <pre><code>piko destroy <span class="arg">feature-auth</span></code></pre>
+
+      <h2>The Primitives</h2>
+
+      <p>
+        Piko provides four primitives. You compose them however you need.
+      </p>
+
+      <p>
+        <strong>Worktrees</strong> — Each environment is a Git worktree at
+        <code>.piko/worktrees/&lt;name&gt;</code>. Your code is isolated per
+        branch.
+      </p>
+
+      <p>
+        <strong>Tmux sessions</strong> — Each environment gets a session named
+        <code>piko/&lt;project&gt;/&lt;name&gt;</code> with windows for shell,
+        services, and logs.
+      </p>
+
+      <p>
+        <strong>Environment variables</strong> — Piko sets <code>PIKO_*</code>
+        variables in your session. Use them to derive ports, configure
+        databases, or anything else.
+      </p>
+
+      <p>
+        <strong>Data directories</strong> — Each environment gets
+        <code>.piko/data/&lt;name&gt;</code> for databases, caches, build
+        outputs—anything that should be isolated.
+      </p>
+
+      <h2>Environment Variables</h2>
+
+      <p>
+        These are available in your tmux session and scripts:
+      </p>
+
+      <pre><code>PIKO_ENV_NAME   <span class="comment"># "feature-auth"</span>
+PIKO_ENV_ID     <span class="comment"># unique integer (useful for ports)</span>
+PIKO_ENV_PATH   <span class="comment"># path to worktree</span>
+PIKO_DATA_DIR   <span class="comment"># path to data directory</span>
+PIKO_ROOT       <span class="comment"># project root</span>
+PIKO_DB_PORT    <span class="comment"># allocated port (Docker mode)</span></code></pre>
+
+      <p>
+        <strong>Derive ports from PIKO_ENV_ID</strong> to avoid conflicts:
+      </p>
+
+      <pre><code><span class="comment"># Shell</span>
+npm run dev -- --port $((3000 + PIKO_ENV_ID))
+
+<span class="comment"># vite.config.js</span>
+server: { port: 3000 + parseInt(process.env.PIKO_ENV_ID || 0) }</code></pre>
+
+      <p>
+        <strong>Use PIKO_DATA_DIR</strong> for local databases:
+      </p>
+
+      <pre><code>DATABASE_URL=sqlite:${PIKO_DATA_DIR}/dev.db</code></pre>
+
+      <h2>Configuration</h2>
+
+      <p>
+        Piko works without configuration. If you need to customize, create
+        <code>.piko.yml</code> in your project root:
+      </p>
+
+      <pre><code>scripts:
+  setup: |
+    ln -s "$PIKO_ROOT/.env.local" .env.local
+    npm install
+
+  run: |
+    DATABASE_URL="postgres://localhost:$PIKO_DB_PORT/dev" \
+    npm run dev</code></pre>
+
+      <p>
+        <strong>setup</strong> runs after environment creation.
+        <strong>run</strong> is executed by <code>piko env run &lt;name&gt;</code>.
+      </p>
+
+      <h2>Docker Mode vs Simple Mode</h2>
+
+      <p>
+        If your project has <code>docker-compose.yml</code>, piko orchestrates
+        containers with isolated networks and dynamically allocated ports.
+      </p>
+
+      <p>
+        Without Docker Compose, piko runs in simple mode: worktrees + tmux +
+        data directories. You handle isolation using the environment variables.
+      </p>
+
+      <p>
+        Mode is auto-detected. No configuration needed.
+      </p>
+
+      <h2>Navigation</h2>
+
+      <pre><code>piko attach <span class="arg">feature-auth</span>   <span class="comment"># attach to session</span>
+piko env pick              <span class="comment"># fuzzy-pick with fzf</span>
+piko env ls                <span class="comment"># list all environments</span></code></pre>
+
+      <p>
+        Inside tmux, standard navigation works: <code>Ctrl-b s</code> for
+        session picker, <code>Ctrl-b w</code> for windows.
+      </p>
+    </div>
+
+    <footer>
+      &copy;
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      Bearsignals
+    </footer>
+  </body>
+</html>
