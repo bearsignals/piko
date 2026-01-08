@@ -7,7 +7,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "piko",
 	Short: "Worktree development environments",
-	Long:  `piko creates isolated development environments for each git worktree, orchestrating Docker containers to enable seamless parallel development.`,
+	Long:  `piko enables parallel engineering using tmux, worktrees, and containers.`,
 }
 
 func Execute() error {

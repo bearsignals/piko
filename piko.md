@@ -2,7 +2,7 @@
 
 ## Overview
 
-`piko` is a CLI tool that creates isolated development environments for each git worktree, orchestrating Docker containers and tmux sessions to enable seamless parallel development.
+`piko` is a CLI tool that creates isolated development environments for each git worktree, orchestrating tmux sessions (and optionally Docker containers) to enable seamless parallel development.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -124,7 +124,7 @@ project-root/
 │
 ├── .git/                           # git directory
 ├── .piko.yml                       # optional piko config
-├── docker-compose.yml              # existing compose file (required)
+├── docker-compose.yml              # compose file (optional - enables Docker mode)
 │
 ├── src/                            # your code (main branch)
 ├── ...
@@ -132,6 +132,12 @@ project-root/
 └── .piko/                          # piko directory
     │
     ├── state.db                    # SQLite database (state, history)
+    │
+    ├── data/                       # environment-specific data (isolated)
+    │   ├── feature-auth/           # data for feature-auth env
+    │   │   ├── dev.db              # local databases
+    │   │   └── cache/              # caches, binaries, etc
+    │   └── feature-payments/       # data for feature-payments env
     │
     └── worktrees/
         │
@@ -301,6 +307,77 @@ project-root/
 
 ---
 
+## Simple Mode (Non-Docker Projects)
+
+For projects without Docker Compose, piko operates in "simple mode" — providing worktrees, tmux sessions, and isolated data directories without container orchestration.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         MODE DETECTION                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Has docker-compose.yml?                                                   │
+│     ├── Yes → Docker mode (containers + tmux)                               │
+│     └── No  → Simple mode (tmux + data dir only)                            │
+│                                                                             │
+│   Simple mode still provides:                                               │
+│     • Git worktrees (isolated code)                                         │
+│     • Tmux sessions (terminal environment)                                  │
+│     • Data directory (isolated storage)                                     │
+│     • Environment variables (PIKO_ENV_ID, PIKO_DATA_DIR)                    │
+│     • Scripts (setup, run, destroy hooks)                                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Command Behavior by Mode
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Command    │  Docker Mode              │  Simple Mode                      │
+├─────────────┼───────────────────────────┼───────────────────────────────────┤
+│  create     │  worktree + compose + tmux│  worktree + tmux + data dir       │
+│  destroy    │  down + rm worktree + data│  rm worktree + data dir           │
+│  up         │  docker compose up        │  no-op (info message)             │
+│  down       │  docker compose down      │  no-op (info message)             │
+│  restart    │  docker compose restart   │  no-op (info message)             │
+│  logs       │  docker compose logs      │  error (use tmux)                 │
+│  exec       │  docker compose exec      │  error (use piko attach)          │
+│  list       │  show container status    │  show "simple"                    │
+│  status     │  container details        │  env info (data dir, env ID)      │
+│  attach     │  tmux attach              │  tmux attach                      │
+│  env        │  print PIKO_* vars        │  print PIKO_* vars                │
+│  run        │  execute run script       │  execute run script               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Simple Mode Isolation
+
+Piko provides primitives; users compose them for isolation:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Isolation Need        │  Solution                                          │
+├────────────────────────┼────────────────────────────────────────────────────┤
+│  Ports                 │  Derive from PIKO_ENV_ID:                          │
+│                        │    server: { port: 3000 + PIKO_ENV_ID }            │
+│                        │    npm run dev -- --port $((3000 + PIKO_ENV_ID))   │
+│                        │                                                    │
+│  Local databases       │  Use PIKO_DATA_DIR:                                │
+│                        │    DATABASE_URL=sqlite:${PIKO_DATA_DIR}/dev.db     │
+│                        │                                                    │
+│  Build outputs         │  Direct to data dir:                               │
+│                        │    go build -o ${PIKO_DATA_DIR}/bin/myapp          │
+│                        │                                                    │
+│  Caches                │  Isolate per environment:                          │
+│                        │    npm_config_cache=${PIKO_DATA_DIR}/.npm          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+See `docs/design/simple-mode.md` for detailed design documentation.
+
+---
+
 ## Scripts (Lifecycle Hooks)
 
 ```
@@ -372,8 +449,10 @@ project-root/
 │   ──────────────────────┼─────────────────────────────────────────────────  │
 │   PIKO_ROOT             │  /home/user/pouch                                 │
 │   PIKO_ENV_NAME         │  feature-auth                                     │
+│   PIKO_ENV_ID           │  42 (unique integer, useful for deriving ports)   │
 │   PIKO_ENV_PATH         │  /home/user/pouch/.piko/worktrees/feature-auth    │
-│   PIKO_PROJECT          │  piko-pouch-feature-auth                          │
+│   PIKO_DATA_DIR         │  /home/user/pouch/.piko/data/feature-auth         │
+│   PIKO_PROJECT          │  pouch                                            │
 │   PIKO_BRANCH           │  feature/auth                                     │
 │                                                                             │
 │   Dynamic port variables (one per service with exposed ports):              │
@@ -923,6 +1002,9 @@ default_windows:
 | Env file handling | Via setup script | No auto-detection; user symlinks explicitly |
 | Port injection | `$PIKO_<SERVICE>_PORT` vars | Composable with any tooling (make, npm, etc) |
 | Tmux shells | Explicit `shells` config | No inference from image; user declares commands |
+| Simple mode | Auto-detect (no compose file) | Same primitives work without Docker |
+| Data isolation | `.piko/data/<env>/` | Per-environment storage for DBs, binaries, caches |
+| Port derivation | User responsibility | `$((3000 + PIKO_ENV_ID))` - composable |
 
 ---
 
@@ -947,8 +1029,13 @@ These are fixed to keep the tool simple and predictable:
 │                            REQUIRED                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  • git        (any recent version with worktree support)                   │
-│  • docker     (with compose v2)                                            │
 │  • tmux       (any recent version)                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      OPTIONAL (for Docker mode)                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • docker     (with compose v2) — only needed if project has compose file  │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐

@@ -137,17 +137,29 @@ npm_config_cache=${PIKO_DATA_DIR}/.npm npm install
 CARGO_HOME=${PIKO_DATA_DIR}/.cargo cargo build
 ```
 
-## Implementation Plan
+## Implementation Status
 
-### Phase 1: Data Directory
-- [ ] Add `PIKO_DATA_DIR` to env vars
-- [ ] Create `.piko/data/<env>/` on `piko create`
-- [ ] Clean up data directory on `piko destroy`
+### Phase 1: Data Directory ✅
+- [x] Add `PIKO_DATA_DIR` and `PIKO_ENV_ID` to env vars (`internal/env/vars.go`)
+- [x] Create `.piko/data/<env>/` on `piko create` (`internal/cli/create.go`)
+- [x] Clean up data directory on `piko destroy` (`internal/cli/destroy.go`)
 
-### Phase 2: Simple Mode
-- [ ] Mode detection (no docker-compose.yml → simple mode)
-- [ ] Skip Docker operations in simple mode
-- [ ] Update `list`/`status` for simple mode
+### Phase 2: Simple Mode ✅
+- [x] Mode detection: `docker.DetectComposeFile()` failure → simple mode
+- [x] Store mode in DB: `DockerProject == ""` indicates simple mode
+- [x] Skip Docker operations in simple mode commands:
+  - `up`, `down`, `restart` - no-op with info message
+  - `logs`, `exec` - error with guidance to use tmux
+  - `attach` - works normally (tmux)
+- [x] Update `list` - shows "simple" status
+- [x] Update `status` - shows mode, data dir, env ID
+
+### Phase 3: Web UI ✅
+- [x] API returns `mode`, `dataDir`, `envId` for environments
+- [x] UI shows purple status dot for simple mode
+- [x] UI displays env ID and data dir (copyable) instead of ports
+- [x] Start/Stop buttons hidden for simple mode
+- [x] Project count shows both docker and simple environments
 
 ## Example: Piko Developing Itself
 
