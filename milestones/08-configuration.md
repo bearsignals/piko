@@ -1,7 +1,7 @@
-# Milestone 7: Configuration
+# Milestone 8: Configuration
 
 **Priority:** Low
-**Depends on:** M1-M3 (Core + Lifecycle + Tmux)
+**Depends on:** M1-M4 (Init + Lifecycle + Server + Tmux)
 **Unlocks:** Project customization, user preferences
 
 ## Goal

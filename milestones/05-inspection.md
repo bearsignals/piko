@@ -1,8 +1,8 @@
-# Milestone 4: Inspection Commands
+# Milestone 5: Inspection Commands
 
-**Priority:** Medium
-**Depends on:** M1 (Core Create), M2 (Lifecycle)
-**Unlocks:** Better visibility into environments
+**Priority:** High
+**Depends on:** M1 (Init & Create), M2 (Lifecycle)
+**Unlocks:** `piko run` workflow, better visibility
 
 ## Goal
 

@@ -1,4 +1,4 @@
-# Milestone 6: Shared Services
+# Milestone 7: Shared Services
 
 **Priority:** Low
 **Depends on:** M1-M2 (Core + Lifecycle)

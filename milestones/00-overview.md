@@ -5,14 +5,14 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│   M1: Core Create Flow ────► M2: Lifecycle ────► M3: Tmux ────►            │
-│         (foundation)          (up/down/destroy)   (sessions)               │
+│   M1: Init & Create ────► M2: Lifecycle ────► M3: Basic Server ────►       │
+│       (foundation)         (up/down/destroy)   (browser create/open)        │
 │                                                                             │
-│   ────► M4: Inspection ────► M5: Web UI ────► M6: Shared Services          │
-│          (ports/logs)         (browser UI)      (redis, etc)               │
+│   ────► M4: Tmux ────► M5: Inspection ────► M6: Full Web UI                │
+│          (sessions)     (piko run, logs)      (ports, logs, controls)       │
 │                                                                             │
-│   ────► M7: Configuration                                                   │
-│          (optional customization)                                           │
+│   ────► M7: Shared Services ────► M8: Configuration                         │
+│          (redis, etc)              (shells, windows, user config)           │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -21,30 +21,40 @@
 
 | # | Milestone | Priority | Effort | Delivers |
 |---|-----------|----------|--------|----------|
-| 1 | Core Create Flow | Critical | Medium | `piko create`, `piko env`, setup script |
-| 2 | Environment Lifecycle | Critical | Small | `up`, `down`, `destroy`, `list` |
-| 3 | Tmux Integration | High | Medium | Sessions, attach, switch |
-| 4 | Inspection Commands | Medium | Small | `piko run`, `logs`, `status`, `open` |
-| 5 | Web UI | Medium | Medium | Browser-based management |
-| 6 | Shared Services | Low | Medium | Cross-environment service sharing |
-| 7 | Configuration | Low | Small | `.piko.yml`, scripts, user config |
+| 1 | Init & Create | Critical | Medium | `piko init`, `piko create`, `piko env`, setup script |
+| 2 | Lifecycle | Critical | Small | `up`, `down`, `destroy`, `list`, destroy script |
+| 3 | Basic Server | High | Small | HTTP server, list, create from browser, open in Cursor |
+| 4 | Tmux Integration | High | Medium | Sessions, attach, switch |
+| 5 | Inspection | High | Small | `piko run`, `logs`, `status`, `open` |
+| 6 | Full Web UI | Medium | Medium | Ports display, start/stop, logs in browser |
+| 7 | Shared Services | Low | Medium | Cross-environment service sharing |
+| 8 | Configuration | Low | Small | shells, windows, ignore, user config |
 
 ## Success Definition
 
-**MVP (M1-M3 complete):**
+**MVP (M1-M5 complete):**
 ```bash
-$ piko create feature-auth    # creates worktree, starts containers, runs setup script
-$ piko attach feature-auth    # user is in tmux session
-$ piko run feature-auth       # runs dev server with correct env vars
+# Initialize project
+$ cd ~/projects/myapp
+$ piko init
+✓ Initialized piko in /home/user/myapp/.piko
+
+# CLI workflow
+$ piko create feature-auth
+$ piko run feature-auth       # dev server with PIKO_* vars
+
+# Browser workflow (localhost:19876)
+$ piko server
+# → Create new environments
+# → Open in Cursor
 ```
 
-**Usable Product (M1-M5 complete):**
+**Usable Product (M1-M6 complete):**
 - All core workflows functional
-- `piko env` for port discovery
-- `piko run` for standardized dev workflow
-- Can manage multiple environments comfortably
+- Full web UI with ports, logs, start/stop
+- Can manage multiple environments from browser
 
-**Complete Product (M1-M7 complete):**
+**Complete Product (M1-M8 complete):**
 - Shared services for efficiency
 - Customizable per-project and per-user
 - Full scripts lifecycle (setup, run, destroy)
@@ -55,10 +65,11 @@ Go — single binary, good CLI libraries (cobra), embeds static files easily, SQ
 
 ## Files
 
-- `milestones/01-core-create.md`
+- `milestones/01-init-create.md`
 - `milestones/02-lifecycle.md`
-- `milestones/03-tmux.md`
-- `milestones/04-inspection.md`
-- `milestones/05-web-ui.md`
-- `milestones/06-shared-services.md`
-- `milestones/07-configuration.md`
+- `milestones/03-basic-server.md`
+- `milestones/04-tmux.md`
+- `milestones/05-inspection.md`
+- `milestones/06-full-web-ui.md`
+- `milestones/07-shared-services.md`
+- `milestones/08-configuration.md`

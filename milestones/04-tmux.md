@@ -1,8 +1,8 @@
-# Milestone 3: Tmux Integration
+# Milestone 4: Tmux Integration
 
 **Priority:** High
-**Depends on:** M1 (Core Create), M2 (Lifecycle)
-**Unlocks:** Complete developer workflow
+**Depends on:** M1 (Init & Create), M2 (Lifecycle)
+**Unlocks:** Complete terminal workflow
 
 ## Goal
 

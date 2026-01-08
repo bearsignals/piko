@@ -632,6 +632,10 @@ default_windows:
 │                              piko CLI                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
+│  INIT                                                                       │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│  piko init                                Initialize project for piko      │
+│                                                                             │
 │  LIFECYCLE                                                                  │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │  piko create <name> [--branch <branch>]   Create worktree + env            │
@@ -686,6 +690,43 @@ default_windows:
 
 ---
 
+## Command Flow: `piko init`
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   $ piko init                                                               │
+│                                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │ 1. VALIDATE                                                         │  │
+│   │    • Check current directory is git repo                            │  │
+│   │    • Check docker-compose.yml exists                                │  │
+│   │    • Check not already initialized                                  │  │
+│   └──────────────────────────────────┬──────────────────────────────────┘  │
+│                                      ▼                                      │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │ 2. CREATE .piko DIRECTORY                                           │  │
+│   │    • mkdir .piko                                                    │  │
+│   │    • Add to .gitignore if not present                               │  │
+│   └──────────────────────────────────┬──────────────────────────────────┘  │
+│                                      ▼                                      │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │ 3. INITIALIZE DATABASE                                              │  │
+│   │    • Create .piko/state.db                                          │  │
+│   │    • Create schema (project, environments tables)                   │  │
+│   │    • Insert project record                                          │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   Output:                                                                   │
+│   ✓ Detected docker-compose.yml                                            │
+│   ✓ Created .piko/state.db                                                 │
+│   ✓ Project "myapp" initialized                                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Command Flow: `piko create feature-auth`
 
 ```
@@ -695,8 +736,7 @@ default_windows:
 │                                                                             │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
 │   │ 1. VALIDATE                                                         │  │
-│   │    • Check docker-compose.yml exists                                │  │
-│   │    • Check git repo                                                 │  │
+│   │    • Check project initialized (.piko/state.db exists)              │  │
 │   │    • Check name not already used                                    │  │
 │   └──────────────────────────────────┬──────────────────────────────────┘  │
 │                                      ▼                                      │
