@@ -3,27 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Piko // Parallel Realities</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;500;700&display=swap"
-      rel="stylesheet"
+    <title>Piko | Isolated Dev Environments</title>
+    <meta
+      name="description"
+      content="CLI tool for isolated development environments using Git worktrees, tmux, and Docker."
     />
-
     <style>
       :root {
-        --bg: #050505;
-        --grid: #1a1a1a;
-        --text-main: #e5e5e5;
-        --text-dim: #666;
-        --accent: #00ff9d; /* Signal Green */
-        --accent-dim: rgba(0, 255, 157, 0.1);
-        --error: #ff3333;
-
-        --font-display: "Space Grotesk", sans-serif;
-        --font-mono: "JetBrains Mono", monospace;
+        --bg-color: #0a0a0a;
+        --text-main: #ededed;
+        --text-muted: #888888;
+        --accent: #00ff9d;
+        --accent-glow: rgba(0, 255, 157, 0.2);
+        --border: rgba(255, 255, 255, 0.1);
+        --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        --font-mono: "JetBrains Mono", "Fira Code", monospace;
       }
 
       * {
@@ -33,333 +28,367 @@
       }
 
       body {
-        background-color: var(--bg);
+        background-color: var(--bg-color);
         color: var(--text-main);
-        font-family: var(--font-mono); /* Default to mono for raw feel */
-        line-height: 1.5;
+        font-family: var(--font-sans);
+        line-height: 1.6;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
-        overflow-x: hidden;
       }
 
-      /* --- BACKGROUND GRID --- */
-      .bg-grid {
+      .grid-bg {
         position: fixed;
         top: 0;
         left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-image: linear-gradient(var(--grid) 1px, transparent 1px),
-          linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-        background-size: 50px 50px;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
         z-index: -1;
         mask-image: radial-gradient(
-          circle at 50% 50%,
+          circle at center,
           black 40%,
-          transparent 90%
+          transparent 80%
         );
       }
 
-      /* --- LAYOUT --- */
-      .layout {
-        max-width: 680px; /* Narrow column for reading focus */
+      .container {
+        max-width: 720px;
         margin: 0 auto;
-        padding: 4rem 1.5rem;
+        padding: 4rem 2rem;
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        z-index: 1;
       }
 
-      /* --- HEADER --- */
       header {
-        margin-bottom: 5rem;
-        position: relative;
-      }
-
-      .signal-container {
+        margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
         gap: 1rem;
-        margin-bottom: 1.5rem;
       }
 
-      .signal-light {
-        width: 8px;
-        height: 8px;
+      .logo-mark {
+        width: 12px;
+        height: 12px;
         background-color: var(--accent);
-        box-shadow: 0 0 15px var(--accent);
-        animation: pulse 3s infinite ease-in-out;
-      }
-
-      .brand {
-        font-size: 0.8rem;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: var(--text-dim);
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 var(--accent-glow);
+        animation: pulse 2s infinite;
       }
 
       h1 {
-        font-family: var(--font-display);
-        font-size: 3.5rem;
-        font-weight: 500;
-        line-height: 1.1;
-        letter-spacing: -0.03em;
-        margin-bottom: 1rem;
+        font-size: 3rem;
+        font-weight: 700;
+        letter-spacing: -0.05em;
       }
 
-      .subtitle {
-        font-family: var(--font-display);
-        font-size: 1.5rem;
-        color: var(--text-dim);
+      .tagline {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        margin-bottom: 2.5rem;
         font-weight: 300;
-        max-width: 90%;
       }
 
-      /* --- INSTALL BAR --- */
-      .install-module {
-        margin: 4rem 0;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid #333;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0;
-        transition: border-color 0.2s;
-      }
-
-      .install-module:hover {
-        border-color: var(--text-dim);
-      }
-
-      .cmd-text {
-        padding: 1.2rem;
-        font-size: 0.9rem;
-        color: var(--accent);
-      }
-
-      .copy-btn {
-        background: transparent;
-        border: none;
-        border-left: 1px solid #333;
-        color: var(--text-main);
+      .problem {
         font-family: var(--font-mono);
-        text-transform: uppercase;
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 2.5rem;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .problem .quote {
+        color: var(--text-main);
+        font-style: italic;
+      }
+
+      section {
+        margin-bottom: 2.5rem;
+      }
+
+      h2 {
         font-size: 0.75rem;
-        padding: 0 2rem;
-        height: 100%;
-        cursor: pointer;
-        transition: all 0.2s;
-        height: 3.5rem; /* Match height of container */
-      }
-
-      .copy-btn:hover {
-        background: var(--text-main);
-        color: var(--bg);
-      }
-
-      /* --- FEATURES (THE "SPECS") --- */
-      .specs-label {
-        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--accent);
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: var(--text-dim);
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid #333;
-        padding-bottom: 0.5rem;
-        display: inline-block;
+        letter-spacing: 0.15em;
+        margin-bottom: 1rem;
+        font-family: var(--font-mono);
       }
 
-      .specs-grid {
+      .philosophy {
         display: grid;
-        grid-template-columns: 1fr;
-        gap: 2rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
       }
 
-      .spec-item {
-        display: flex;
-        gap: 1.5rem;
-        align-items: baseline;
+      .philosophy-item {
+        font-size: 0.9rem;
+        color: var(--text-muted);
       }
 
-      .spec-idx {
-        color: var(--text-dim);
-        font-size: 0.8rem;
-      }
-
-      .spec-content h3 {
-        font-family: var(--font-display);
-        font-size: 1.25rem;
+      .philosophy-item strong {
+        color: var(--text-main);
         font-weight: 500;
-        margin-bottom: 0.5rem;
+      }
+
+      .workflow {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1.25rem 1.5rem;
+      }
+
+      .workflow .line {
+        display: flex;
+        gap: 1rem;
+        padding: 0.25rem 0;
+      }
+
+      .workflow .prompt {
+        color: var(--text-muted);
+        user-select: none;
+      }
+
+      .workflow .cmd {
         color: var(--text-main);
       }
 
-      .spec-content p {
-        color: #888;
-        font-size: 0.95rem;
-      }
-
-      /* --- FOOTER / STATUS --- */
-      footer {
-        margin-top: 5rem;
-        border-top: 1px solid #222;
-        padding-top: 2rem;
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.75rem;
-        color: var(--text-dim);
-      }
-
-      .status-indicator {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .status-dot {
-        width: 6px;
-        height: 6px;
-        background: #333;
-        border-radius: 50%;
-      }
-
-      .status-dot.active {
-        background: var(--accent);
-      }
-
-      a {
-        color: inherit;
-        text-decoration: none;
-        border-bottom: 1px solid transparent;
-        transition: 0.2s;
-      }
-      a:hover {
+      .workflow .cmd .arg {
         color: var(--accent);
-        border-bottom-color: var(--accent);
       }
 
-      /* --- ANIMATIONS --- */
+      .workflow .comment {
+        color: var(--text-muted);
+        margin-left: auto;
+      }
+
+      .primitives {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+
+      .primitives span {
+        color: var(--text-main);
+      }
+
+      .links {
+        display: flex;
+        gap: 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        margin-top: 1rem;
+      }
+
+      .btn {
+        text-decoration: none;
+        color: var(--text-main);
+        padding: 0.75rem 1.5rem;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+      }
+
+      .btn:hover {
+        border-color: var(--text-main);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .btn.primary {
+        background-color: var(--text-main);
+        color: var(--bg-color);
+        border-color: var(--text-main);
+        font-weight: 600;
+      }
+
+      .btn.primary:hover {
+        background-color: #d4d4d4;
+      }
+
+      footer {
+        padding: 2rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.2);
+        font-size: 0.8rem;
+        font-family: var(--font-mono);
+      }
+
       @keyframes pulse {
         0% {
-          opacity: 0.5;
-          box-shadow: 0 0 0px var(--accent-dim);
+          transform: scale(0.95);
+          box-shadow: 0 0 0 0 rgba(0, 255, 157, 0.7);
         }
-        50% {
-          opacity: 1;
-          box-shadow: 0 0 20px var(--accent-dim);
+        70% {
+          transform: scale(1);
+          box-shadow: 0 0 0 10px rgba(0, 255, 157, 0);
         }
         100% {
-          opacity: 0.5;
-          box-shadow: 0 0 0px var(--accent-dim);
+          transform: scale(0.95);
+          box-shadow: 0 0 0 0 rgba(0, 255, 157, 0);
         }
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      header,
+      .tagline,
+      .problem,
+      section,
+      .links {
+        animation: fadeUp 0.8s ease-out forwards;
+        opacity: 0;
+      }
+      header {
+        animation-delay: 0.1s;
+      }
+      .tagline {
+        animation-delay: 0.15s;
+      }
+      .problem {
+        animation-delay: 0.2s;
+      }
+      section:nth-of-type(1) {
+        animation-delay: 0.25s;
+      }
+      section:nth-of-type(2) {
+        animation-delay: 0.3s;
+      }
+      section:nth-of-type(3) {
+        animation-delay: 0.35s;
+      }
+      .links {
+        animation-delay: 0.4s;
       }
 
       @media (max-width: 600px) {
-        h1 {
-          font-size: 2.5rem;
+        .philosophy {
+          grid-template-columns: 1fr;
         }
-        .layout {
-          padding: 2rem 1rem;
+        .workflow .comment {
+          display: none;
         }
       }
     </style>
   </head>
   <body>
-    <div class="bg-grid"></div>
+    <div class="grid-bg"></div>
 
-    <div class="layout">
+    <div class="container">
       <header>
-        <div class="signal-container">
-          <div class="signal-light"></div>
-          <div class="brand">Bearsignals / Piko</div>
-        </div>
-
-        <h1>Stop fighting<br />your localhost.</h1>
-        <p class="subtitle">
-          Parallel universes for your terminal. Spin up isolated Git worktrees
-          with unique ports and containers instantly.
-        </p>
+        <div class="logo-mark"></div>
+        <h1>piko</h1>
       </header>
 
-      <div class="install-module">
-        <div class="cmd-text">
-          > go install github.com/bearsignals/piko@latest
-        </div>
-        <button class="copy-btn" onclick="copyCmd(this)">Copy</button>
+      <p class="tagline">
+        Isolated development environments using Git worktrees, tmux, and Docker.
+      </p>
+
+      <div class="problem">
+        <span class="quote"
+          >"I want to work on feature-auth and feature-payments
+          simultaneously,<br />each with their own database state, without
+          conflicts."</span
+        >
       </div>
 
-      <section class="specs">
-        <span class="specs-label">System Specifications</span>
-
-        <div class="specs-grid">
-          <div class="spec-item">
-            <span class="spec-idx">01</span>
-            <div class="spec-content">
-              <h3>Context Switching Solved</h3>
-              <p>
-                One command to switch branches, containers, and tmux sessions.
-                No more stashing changes or restarting servers.
-              </p>
-            </div>
+      <section>
+        <h2>Philosophy</h2>
+        <div class="philosophy">
+          <div class="philosophy-item">
+            <strong>Primitives over prescriptions.</strong> Provides building
+            blocks, lets you compose.
           </div>
-
-          <div class="spec-item">
-            <span class="spec-idx">02</span>
-            <div class="spec-content">
-              <h3>Port Conflict Immunity</h3>
-              <p>
-                Every environment gets a unique mathematical ID. Run 5 versions
-                of your app simultaneously. Zero collisions.
-              </p>
-            </div>
+          <div class="philosophy-item">
+            <strong>Composable.</strong> Leverages Git, tmux, Docker. No
+            lock-in.
           </div>
-
-          <div class="spec-item">
-            <span class="spec-idx">03</span>
-            <div class="spec-content">
-              <h3>Data Sovereignty</h3>
-              <p>
-                Databases and caches are isolated per environment. Nuke the
-                database in branch A, branch B stays pristine.
-              </p>
-            </div>
+          <div class="philosophy-item">
+            <strong>Zero config by default.</strong> Just works, configure only
+            if needed.
           </div>
-
-          <div class="spec-item">
-            <span class="spec-idx">04</span>
-            <div class="spec-content">
-              <h3>Agnostic Architecture</h3>
-              <p>
-                Works with your existing <code>docker-compose</code>. Don't use
-                Docker? Piko works in "Simple Mode" for pure binary isolation.
-              </p>
-            </div>
+          <div class="philosophy-item">
+            <strong>Graceful degradation.</strong> Works with or without Docker.
           </div>
         </div>
       </section>
 
-      <footer>
-        <div class="links">
-          <a href="https://github.com/bearsignals/piko">GitHub Source</a>
+      <section>
+        <h2>Workflow</h2>
+        <div class="workflow">
+          <div class="line">
+            <span class="prompt">$</span>
+            <span class="cmd">piko init</span>
+            <span class="comment"># initialize project</span>
+          </div>
+          <div class="line">
+            <span class="prompt">$</span>
+            <span class="cmd"
+              >piko create <span class="arg">feature-auth</span></span
+            >
+            <span class="comment"># worktree + containers + tmux</span>
+          </div>
+          <div class="line">
+            <span class="prompt">$</span>
+            <span class="cmd"
+              >piko attach <span class="arg">feature-auth</span></span
+            >
+            <span class="comment"># jump into the environment</span>
+          </div>
+          <div class="line">
+            <span class="prompt">$</span>
+            <span class="cmd"
+              >piko destroy <span class="arg">feature-auth</span></span
+            >
+            <span class="comment"># tear it all down</span>
+          </div>
         </div>
-        <div class="status-indicator">
-          <span>SYSTEM ONLINE</span>
-          <div class="status-dot active"></div>
-        </div>
-      </footer>
+      </section>
+
+      <section>
+        <h2>What it provides</h2>
+        <p class="primitives">
+          <span>worktrees</span> + <span>tmux</span> + <span>env vars</span> +
+          <span>data dirs</span>
+        </p>
+      </section>
+
+      <div class="links">
+        <a href="https://github.com/bearsignals/piko" class="btn primary"
+          >GitHub</a
+        >
+      </div>
     </div>
 
-    <script>
-      function copyCmd(btn) {
-        const cmd = "go install github.com/bearsignals/piko@latest";
-        navigator.clipboard.writeText(cmd);
-        const original = btn.innerText;
-        btn.innerText = "COPIED";
-        btn.style.color = "var(--accent)";
-        setTimeout(() => {
-          btn.innerText = original;
-          btn.style.color = "";
-        }, 2000);
-      }
-    </script>
+    <footer>
+      &copy;
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      Bearsignals
+    </footer>
   </body>
 </html>
