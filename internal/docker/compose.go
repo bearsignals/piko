@@ -90,3 +90,7 @@ func (c *ComposeConfig) GetServiceNames() []string {
 	}
 	return names
 }
+
+func (c *ComposeConfig) Project() *types.Project {
+	return c.project
+}

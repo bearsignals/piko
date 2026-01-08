@@ -32,17 +32,17 @@ type WorktreeResult struct {
 	Branch string // Branch name used
 }
 
-// CreateWorktree creates a new git worktree.
-// If BranchName is empty, creates a new branch with the same name as the worktree.
+// CreateWorktree creates a new git worktree with a new branch.
+// If BranchName is specified, the new branch is based on that branch.
+// Otherwise, the new branch is based on HEAD.
+// The new branch is always named after the worktree (opts.Name).
 func CreateWorktree(opts WorktreeOptions) (*WorktreeResult, error) {
 	worktreePath := filepath.Join(opts.BasePath, opts.Name)
 
 	var cmd *exec.Cmd
 	if opts.BranchName != "" {
-		// Use existing branch
-		cmd = exec.Command("git", "worktree", "add", worktreePath, opts.BranchName)
+		cmd = exec.Command("git", "worktree", "add", worktreePath, "-b", opts.Name, opts.BranchName)
 	} else {
-		// Create new branch with same name as worktree
 		cmd = exec.Command("git", "worktree", "add", worktreePath, "-b", opts.Name)
 	}
 
@@ -51,12 +51,7 @@ func CreateWorktree(opts WorktreeOptions) (*WorktreeResult, error) {
 		return nil, fmt.Errorf("git worktree add failed: %s: %w", string(output), err)
 	}
 
-	branch := opts.BranchName
-	if branch == "" {
-		branch = opts.Name
-	}
-
-	return &WorktreeResult{Path: worktreePath, Branch: branch}, nil
+	return &WorktreeResult{Path: worktreePath, Branch: opts.Name}, nil
 }
 
 // BranchExists checks if a branch with the given name exists.

@@ -156,9 +156,10 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	servicePorts := composeConfig.GetServicePorts()
 	allocations := ports.Allocate(envID, servicePorts)
 
-	override := docker.GenerateOverride(project.Name, req.Name, allocations)
-	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	if err := docker.WriteOverrideFile(overridePath, override); err != nil {
+	composeProject := composeConfig.Project()
+	docker.ApplyOverrides(composeProject, project.Name, req.Name, allocations)
+	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
+	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
 		s.db.DeleteEnvironment(req.Name)
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
@@ -167,7 +168,6 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 
 	composeCmd := exec.Command("docker", "compose",
 		"-p", dockerProject,
-		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
 	composeCmd.Dir = composeDir
@@ -254,13 +254,13 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 	servicePorts := composeConfig.GetServicePorts()
 	allocations := ports.Allocate(environment.ID, servicePorts)
 
-	override := docker.GenerateOverride(project.Name, name, allocations)
-	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	docker.WriteOverrideFile(overridePath, override)
+	composeProject := composeConfig.Project()
+	docker.ApplyOverrides(composeProject, project.Name, name, allocations)
+	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
+	docker.WriteProjectFile(pikoComposePath, composeProject)
 
 	cmd := exec.Command("docker", "compose",
 		"-p", environment.DockerProject,
-		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
 	cmd.Dir = composeDir

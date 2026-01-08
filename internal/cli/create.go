@@ -126,11 +126,12 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	servicePorts := composeConfig.GetServicePorts()
 	allocations := ports.Allocate(envID, servicePorts)
 
-	override := docker.GenerateOverride(project.Name, name, allocations)
-	overridePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	if err := docker.WriteOverrideFile(overridePath, override); err != nil {
+	composeProject := composeConfig.Project()
+	docker.ApplyOverrides(composeProject, project.Name, name, allocations)
+	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
+	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
 		cleanupWithDB()
-		return fmt.Errorf("failed to write override file: %w", err)
+		return fmt.Errorf("failed to write compose file: %w", err)
 	}
 	fmt.Println("✓ Generated docker-compose.piko.yml")
 
@@ -148,7 +149,6 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	composeCmd := exec.Command("docker", "compose",
 		"-p", dockerProject,
-		"-f", "docker-compose.yml",
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
 	composeCmd.Dir = composeDir

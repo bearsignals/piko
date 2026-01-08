@@ -3,57 +3,42 @@ package docker
 import (
 	"fmt"
 	"os"
-	"strings"
 
+	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/gwuah/piko/internal/ports"
 )
 
-type OverrideConfig struct {
-	Services    map[string]OverrideService
-	NetworkName string
-}
-
-type OverrideService struct {
-	Ports []string
-}
-
-func GenerateOverride(projectName, envName string, allocations []ports.Allocation) *OverrideConfig {
-	networkName := fmt.Sprintf("piko-%s-%s", projectName, envName)
-
-	services := make(map[string]OverrideService)
+func ApplyOverrides(project *types.Project, projectName, envName string, allocations []ports.Allocation) {
+	portsByService := make(map[string][]types.ServicePortConfig)
 	for _, alloc := range allocations {
-		svc, exists := services[alloc.Service]
-		if !exists {
-			svc = OverrideService{Ports: []string{}}
-		}
-		svc.Ports = append(svc.Ports, fmt.Sprintf("%d:%d", alloc.HostPort, alloc.ContainerPort))
-		services[alloc.Service] = svc
+		portsByService[alloc.Service] = append(portsByService[alloc.Service], types.ServicePortConfig{
+			Target:    uint32(alloc.ContainerPort),
+			Published: fmt.Sprintf("%d", alloc.HostPort),
+		})
 	}
 
-	return &OverrideConfig{
-		Services:    services,
-		NetworkName: networkName,
+	for name, svc := range project.Services {
+		if newPorts, ok := portsByService[name]; ok {
+			svc.Ports = newPorts
+			project.Services[name] = svc
+		}
+	}
+
+	networkName := fmt.Sprintf("piko-%s-%s", projectName, envName)
+	project.Networks = types.Networks{
+		"default": types.NetworkConfig{
+			Name: networkName,
+		},
 	}
 }
 
-func WriteOverrideFile(path string, config *OverrideConfig) error {
-	var sb strings.Builder
-
-	sb.WriteString("services:\n")
-	for name, svc := range config.Services {
-		sb.WriteString(fmt.Sprintf("  %s:\n", name))
-		sb.WriteString("    ports: !override\n")
-		for _, port := range svc.Ports {
-			sb.WriteString(fmt.Sprintf("      - \"%s\"\n", port))
-		}
+func WriteProjectFile(path string, project *types.Project) error {
+	data, err := project.MarshalYAML()
+	if err != nil {
+		return fmt.Errorf("failed to marshal project: %w", err)
 	}
-
-	sb.WriteString("\nnetworks:\n")
-	sb.WriteString("  default:\n")
-	sb.WriteString(fmt.Sprintf("    name: %s\n", config.NetworkName))
-
-	if err := os.WriteFile(path, []byte(sb.String()), 0644); err != nil {
-		return fmt.Errorf("failed to write override file: %w", err)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 	return nil
 }
