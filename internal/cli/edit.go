@@ -22,21 +22,16 @@ func init() {
 func runEdit(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	ctx, err := NewContext()
+	resolved, err := ResolveEnvironment(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
-
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
+	defer resolved.Close()
 
 	editor := detectEditor()
-	fmt.Printf("→ Opening %s in %s...\n", environment.Path, editor)
+	fmt.Printf("Opening %s in %s...\n", resolved.Environment.Path, editor)
 
-	editorCmd := exec.Command(editor, environment.Path)
+	editorCmd := exec.Command(editor, resolved.Environment.Path)
 	return editorCmd.Start()
 }
 

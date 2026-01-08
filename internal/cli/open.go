@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -30,28 +29,18 @@ func runOpen(cmd *cobra.Command, args []string) error {
 		serviceName = args[1]
 	}
 
-	ctx, err := NewContext()
+	resolved, err := RequireDocker(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
+	defer resolved.Close()
 
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	status := docker.GetProjectStatus(composeDir, environment.DockerProject)
+	status := docker.GetProjectStatus(resolved.ComposeDir, resolved.Environment.DockerProject)
 	if status != docker.StatusRunning {
 		return fmt.Errorf("containers not running (run 'piko up %s' first)", name)
 	}
 
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
+	composeConfig, err := docker.ParseComposeConfig(resolved.ComposeDir)
 	if err != nil {
 		return fmt.Errorf("failed to parse compose config: %w", err)
 	}
@@ -76,13 +65,13 @@ func runOpen(cmd *cobra.Command, args []string) error {
 	}
 
 	containerPort := ports[0]
-	hostPort, err := getHostPort(composeDir, environment.DockerProject, serviceName, containerPort)
+	hostPort, err := getHostPort(resolved.ComposeDir, resolved.Environment.DockerProject, serviceName, containerPort)
 	if err != nil {
 		return fmt.Errorf("failed to get port for %s: %w", serviceName, err)
 	}
 
 	url := fmt.Sprintf("http://localhost:%d", hostPort)
-	fmt.Printf("→ Opening %s in browser...\n", url)
+	fmt.Printf("Opening %s in browser...\n", url)
 
 	return openBrowser(url)
 }

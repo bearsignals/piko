@@ -1,7 +1,6 @@
 package state
 
 import (
-	"database/sql"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -48,42 +47,19 @@ func (db *DB) InsertProject(p *Project) error {
 
 func (db *DB) GetProjectByPath(path string) (*Project, error) {
 	cleanPath := filepath.Clean(path)
-
 	row := db.conn.QueryRow(
-		`SELECT id, name, root_path, compose_file, COALESCE(compose_dir, ''), created_at
-		 FROM projects WHERE root_path = ?`,
+		`SELECT `+projectColumns+` FROM projects WHERE root_path = ?`,
 		cleanPath,
 	)
-
-	var p Project
-	err := row.Scan(&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.ComposeDir, &p.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("no project found at %s", path)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get project: %w", err)
-	}
-
-	return &p, nil
+	return getOneProject(row, fmt.Sprintf("no project found at %s", path))
 }
 
 func (db *DB) GetProjectByID(id int64) (*Project, error) {
 	row := db.conn.QueryRow(
-		`SELECT id, name, root_path, compose_file, COALESCE(compose_dir, ''), created_at
-		 FROM projects WHERE id = ?`,
+		`SELECT `+projectColumns+` FROM projects WHERE id = ?`,
 		id,
 	)
-
-	var p Project
-	err := row.Scan(&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.ComposeDir, &p.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("project not found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get project: %w", err)
-	}
-
-	return &p, nil
+	return getOneProject(row, "project not found")
 }
 
 func (db *DB) FindProjectByPath(path string) (*Project, error) {
@@ -107,8 +83,7 @@ func (db *DB) FindProjectByPath(path string) (*Project, error) {
 
 func (db *DB) ListProjects() ([]*Project, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, name, root_path, compose_file, COALESCE(compose_dir, ''), created_at
-		 FROM projects ORDER BY name ASC`,
+		`SELECT ` + projectColumns + ` FROM projects ORDER BY name ASC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
@@ -117,12 +92,11 @@ func (db *DB) ListProjects() ([]*Project, error) {
 
 	var projects []*Project
 	for rows.Next() {
-		var p Project
-		err := rows.Scan(&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.ComposeDir, &p.CreatedAt)
+		p, err := scanProject(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %w", err)
 		}
-		projects = append(projects, &p)
+		projects = append(projects, p)
 	}
 
 	return projects, rows.Err()
@@ -144,16 +118,7 @@ func (db *DB) DeleteProject(rootPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("project not found")
-	}
-
-	return nil
+	return checkRowsAffected(result, "project not found")
 }
 
 func (db *DB) DeleteProjectByName(name string) error {
@@ -161,33 +126,13 @@ func (db *DB) DeleteProjectByName(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("project %q not found", name)
-	}
-
-	return nil
+	return checkRowsAffected(result, fmt.Sprintf("project %q not found", name))
 }
 
 func (db *DB) GetProjectByName(name string) (*Project, error) {
 	row := db.conn.QueryRow(
-		`SELECT id, name, root_path, compose_file, COALESCE(compose_dir, ''), created_at
-		 FROM projects WHERE LOWER(name) = LOWER(?)`,
+		`SELECT `+projectColumns+` FROM projects WHERE LOWER(name) = LOWER(?)`,
 		strings.ToLower(name),
 	)
-
-	var p Project
-	err := row.Scan(&p.ID, &p.Name, &p.RootPath, &p.ComposeFile, &p.ComposeDir, &p.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("project %q not found", name)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get project: %w", err)
-	}
-
-	return &p, nil
+	return getOneProject(row, fmt.Sprintf("project %q not found", name))
 }

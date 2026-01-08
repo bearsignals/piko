@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -27,35 +26,25 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		service = args[1]
 	}
 
-	ctx, err := NewContext()
+	resolved, err := ResolveEnvironment(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
+	defer resolved.Close()
 
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	if environment.DockerProject == "" {
+	if resolved.Environment.DockerProject == "" {
 		fmt.Println("Simple mode environment - no containers to restart")
 		return nil
 	}
 
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
 	var composeCmd *exec.Cmd
 	if service != "" {
-		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "restart", service)
+		composeCmd = exec.Command("docker", "compose", "-p", resolved.Environment.DockerProject, "restart", service)
 	} else {
-		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "restart")
+		composeCmd = exec.Command("docker", "compose", "-p", resolved.Environment.DockerProject, "restart")
 	}
 
-	composeCmd.Dir = composeDir
+	composeCmd.Dir = resolved.ComposeDir
 	composeCmd.Stdout = os.Stdout
 	composeCmd.Stderr = os.Stderr
 
@@ -64,9 +53,9 @@ func runRestart(cmd *cobra.Command, args []string) error {
 	}
 
 	if service != "" {
-		fmt.Printf("✓ Restarted %s\n", service)
+		fmt.Printf("Restarted %s\n", service)
 	} else {
-		fmt.Println("✓ Restarted containers")
+		fmt.Println("Restarted containers")
 	}
 	return nil
 }

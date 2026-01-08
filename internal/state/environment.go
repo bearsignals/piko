@@ -37,46 +37,23 @@ func (db *DB) InsertEnvironment(e *Environment) (int64, error) {
 
 func (db *DB) GetEnvironmentByName(projectID int64, name string) (*Environment, error) {
 	row := db.conn.QueryRow(
-		`SELECT id, project_id, name, branch, path, docker_project, tmux_session, created_at
-		 FROM environments WHERE project_id = ? AND name = ?`,
+		`SELECT `+environmentColumns+` FROM environments WHERE project_id = ? AND name = ?`,
 		projectID, name,
 	)
-
-	var e Environment
-	err := row.Scan(&e.ID, &e.ProjectID, &e.Name, &e.Branch, &e.Path, &e.DockerProject, &e.TmuxSession, &e.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("environment %q not found", name)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get environment: %w", err)
-	}
-
-	return &e, nil
+	return getOneEnvironment(row, fmt.Sprintf("environment %q not found", name))
 }
 
 func (db *DB) GetEnvironmentByID(id int64) (*Environment, error) {
 	row := db.conn.QueryRow(
-		`SELECT id, project_id, name, branch, path, docker_project, tmux_session, created_at
-		 FROM environments WHERE id = ?`,
+		`SELECT `+environmentColumns+` FROM environments WHERE id = ?`,
 		id,
 	)
-
-	var e Environment
-	err := row.Scan(&e.ID, &e.ProjectID, &e.Name, &e.Branch, &e.Path, &e.DockerProject, &e.TmuxSession, &e.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("environment not found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get environment: %w", err)
-	}
-
-	return &e, nil
+	return getOneEnvironment(row, "environment not found")
 }
 
 func (db *DB) ListEnvironmentsByProject(projectID int64) ([]*Environment, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, project_id, name, branch, path, docker_project, tmux_session, created_at
-		 FROM environments WHERE project_id = ? ORDER BY created_at DESC`,
+		`SELECT `+environmentColumns+` FROM environments WHERE project_id = ? ORDER BY created_at DESC`,
 		projectID,
 	)
 	if err != nil {
@@ -86,12 +63,11 @@ func (db *DB) ListEnvironmentsByProject(projectID int64) ([]*Environment, error)
 
 	var environments []*Environment
 	for rows.Next() {
-		var e Environment
-		err := rows.Scan(&e.ID, &e.ProjectID, &e.Name, &e.Branch, &e.Path, &e.DockerProject, &e.TmuxSession, &e.CreatedAt)
+		e, err := scanEnvironment(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan environment: %w", err)
 		}
-		environments = append(environments, &e)
+		environments = append(environments, e)
 	}
 
 	return environments, rows.Err()
@@ -99,8 +75,7 @@ func (db *DB) ListEnvironmentsByProject(projectID int64) ([]*Environment, error)
 
 func (db *DB) ListAllEnvironments() ([]*Environment, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, project_id, name, branch, path, docker_project, tmux_session, created_at
-		 FROM environments ORDER BY created_at DESC`,
+		`SELECT ` + environmentColumns + ` FROM environments ORDER BY created_at DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list environments: %w", err)
@@ -109,12 +84,11 @@ func (db *DB) ListAllEnvironments() ([]*Environment, error) {
 
 	var environments []*Environment
 	for rows.Next() {
-		var e Environment
-		err := rows.Scan(&e.ID, &e.ProjectID, &e.Name, &e.Branch, &e.Path, &e.DockerProject, &e.TmuxSession, &e.CreatedAt)
+		e, err := scanEnvironment(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan environment: %w", err)
 		}
-		environments = append(environments, &e)
+		environments = append(environments, e)
 	}
 
 	return environments, rows.Err()
@@ -140,16 +114,7 @@ func (db *DB) DeleteEnvironment(projectID int64, name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete environment: %w", err)
 	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	return nil
+	return checkRowsAffected(result, fmt.Sprintf("environment %q not found", name))
 }
 
 type EnvironmentWithProject struct {

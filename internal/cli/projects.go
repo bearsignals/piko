@@ -2,8 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -36,19 +35,15 @@ func runProjects(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tPATH\tENVIRONMENTS\tCREATED")
-
+	table := NewTable("NAME", "PATH", "ENVIRONMENTS", "CREATED")
 	for _, p := range projects {
 		environments, err := ctx.DB.ListEnvironmentsByProject(p.ID)
 		envCount := 0
 		if err == nil {
 			envCount = len(environments)
 		}
-		age := formatAge(p.CreatedAt)
-		fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", p.Name, p.RootPath, envCount, age)
+		table.Row(p.Name, p.RootPath, strconv.Itoa(envCount), formatAge(p.CreatedAt))
 	}
-
-	w.Flush()
+	table.Flush()
 	return nil
 }

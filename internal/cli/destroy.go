@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/gwuah/piko/internal/operations"
 	"github.com/spf13/cobra"
 )
@@ -24,21 +22,16 @@ func init() {
 func runDestroy(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	ctx, err := NewContext()
+	resolved, err := ResolveEnvironment(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
-
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
+	defer resolved.Close()
 
 	return operations.DestroyEnvironment(operations.DestroyEnvironmentOptions{
-		DB:            ctx.DB,
-		Project:       ctx.Project,
-		Environment:   environment,
+		DB:            resolved.Ctx.DB,
+		Project:       resolved.Project,
+		Environment:   resolved.Environment,
 		RemoveVolumes: destroyVolumes,
 		Logger:        &operations.StdoutLogger{},
 	})

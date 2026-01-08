@@ -1,10 +1,8 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -34,27 +32,13 @@ func runLogs(cmd *cobra.Command, args []string) error {
 		serviceName = args[1]
 	}
 
-	ctx, err := NewContext()
+	resolved, err := RequireDocker(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
+	defer resolved.Close()
 
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	if environment.DockerProject == "" {
-		return fmt.Errorf("simple mode environment - no container logs available (use tmux)")
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	cmdArgs := []string{"compose", "-p", environment.DockerProject, "logs"}
+	cmdArgs := []string{"compose", "-p", resolved.Environment.DockerProject, "logs"}
 
 	if logsFollow {
 		cmdArgs = append(cmdArgs, "-f")
@@ -69,7 +53,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	dockerCmd := exec.Command("docker", cmdArgs...)
-	dockerCmd.Dir = composeDir
+	dockerCmd.Dir = resolved.ComposeDir
 	dockerCmd.Stdin = os.Stdin
 	dockerCmd.Stdout = os.Stdout
 	dockerCmd.Stderr = os.Stderr

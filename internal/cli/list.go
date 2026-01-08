@@ -3,10 +3,7 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
-	"text/tabwriter"
 	"time"
-
-	"os"
 
 	"github.com/gwuah/piko/internal/docker"
 	"github.com/spf13/cobra"
@@ -47,9 +44,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATUS\tBRANCH\tCREATED")
-
+	table := NewTable("NAME", "STATUS", "BRANCH", "CREATED")
 	for _, e := range environments {
 		var status string
 		if e.DockerProject == "" {
@@ -61,11 +56,9 @@ func runList(cmd *cobra.Command, args []string) error {
 			}
 			status = string(docker.GetProjectStatus(composeDir, e.DockerProject))
 		}
-		age := formatAge(e.CreatedAt)
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", e.Name, status, e.Branch, age)
+		table.Row(e.Name, status, e.Branch, formatAge(e.CreatedAt))
 	}
-
-	w.Flush()
+	table.Flush()
 	return nil
 }
 
@@ -86,9 +79,7 @@ func runListAll() error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "PROJECT\tENVIRONMENT\tSTATUS\tBRANCH")
-
+	table := NewTable("PROJECT", "ENVIRONMENT", "STATUS", "BRANCH")
 	for _, p := range projects {
 		environments, err := ctx.DB.ListEnvironmentsByProject(p.ID)
 		if err != nil {
@@ -96,7 +87,7 @@ func runListAll() error {
 		}
 
 		if len(environments) == 0 {
-			fmt.Fprintf(w, "%s\t(no environments)\t\t\n", p.Name)
+			table.Row(p.Name, "(no environments)", "", "")
 			continue
 		}
 
@@ -111,11 +102,10 @@ func runListAll() error {
 				}
 				status = string(docker.GetProjectStatus(composeDir, e.DockerProject))
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.Name, e.Name, status, e.Branch)
+			table.Row(p.Name, e.Name, status, e.Branch)
 		}
 	}
-
-	w.Flush()
+	table.Flush()
 	return nil
 }
 

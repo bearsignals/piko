@@ -3,14 +3,12 @@ package cli
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/gwuah/piko/internal/docker"
 	"github.com/gwuah/piko/internal/env"
 	"github.com/gwuah/piko/internal/ports"
-	"github.com/gwuah/piko/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -32,28 +30,18 @@ func init() {
 func runEnv(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	ctx, err := NewContext()
+	resolved, err := ResolveEnvironment(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
+	defer resolved.Close()
 
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	allocations, err := discoverPorts(environment, composeDir)
+	allocations, err := discoverPorts(resolved.Environment.DockerProject, resolved.ComposeDir)
 	if err != nil {
 		return fmt.Errorf("failed to discover ports: %w", err)
 	}
 
-	pikoEnv := env.Build(ctx.Project, environment, allocations)
+	pikoEnv := env.Build(resolved.Project, resolved.Environment, allocations)
 
 	if envJSON {
 		data, err := pikoEnv.ToJSON()
@@ -68,8 +56,12 @@ func runEnv(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func discoverPorts(environment *state.Environment, composeDir string) ([]ports.Allocation, error) {
+func discoverPorts(dockerProject, composeDir string) ([]ports.Allocation, error) {
 	var allocations []ports.Allocation
+
+	if dockerProject == "" {
+		return allocations, nil
+	}
 
 	composeConfig, err := docker.ParseComposeConfig(composeDir)
 	if err != nil {
@@ -79,7 +71,7 @@ func discoverPorts(environment *state.Environment, composeDir string) ([]ports.A
 	for service, containerPorts := range composeConfig.GetServicePorts() {
 		for _, containerPort := range containerPorts {
 			cmd := exec.Command("docker", "compose",
-				"-p", environment.DockerProject,
+				"-p", dockerProject,
 				"port", service, fmt.Sprintf("%d", containerPort))
 			cmd.Dir = composeDir
 

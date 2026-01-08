@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/gwuah/piko/internal/config"
 	"github.com/gwuah/piko/internal/docker"
@@ -49,33 +48,19 @@ func runShell(cmd *cobra.Command, args []string) error {
 }
 
 func executeInContainer(name, service string, command []string) error {
-	ctx, err := NewContext()
+	resolved, err := RequireDocker(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
+	defer resolved.Close()
 
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	if environment.DockerProject == "" {
-		return fmt.Errorf("simple mode environment - no containers to exec into (use 'piko attach')")
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	status := docker.GetProjectStatus(composeDir, environment.DockerProject)
+	status := docker.GetProjectStatus(resolved.ComposeDir, resolved.Environment.DockerProject)
 	if status != docker.StatusRunning {
 		return fmt.Errorf("containers not running (run 'piko up %s' first)", name)
 	}
 
 	if len(command) == 0 {
-		cfg, _ := config.Load(ctx.Project.RootPath)
+		cfg, _ := config.Load(resolved.Project.RootPath)
 		if cfg != nil && cfg.Shells != nil {
 			if shell, ok := cfg.Shells[service]; ok {
 				command = []string{"sh", "-c", shell}
@@ -86,11 +71,11 @@ func executeInContainer(name, service string, command []string) error {
 		}
 	}
 
-	cmdArgs := []string{"compose", "-p", environment.DockerProject, "exec", service}
+	cmdArgs := []string{"compose", "-p", resolved.Environment.DockerProject, "exec", service}
 	cmdArgs = append(cmdArgs, command...)
 
 	dockerCmd := exec.Command("docker", cmdArgs...)
-	dockerCmd.Dir = composeDir
+	dockerCmd.Dir = resolved.ComposeDir
 	dockerCmd.Stdin = os.Stdin
 	dockerCmd.Stdout = os.Stdout
 	dockerCmd.Stderr = os.Stderr

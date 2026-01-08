@@ -34,49 +34,39 @@ type containerInfo struct {
 func runStatus(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	ctx, err := NewContext()
+	resolved, err := ResolveEnvironment(name)
 	if err != nil {
 		return err
 	}
-	defer ctx.Close()
+	defer resolved.Close()
 
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		return fmt.Errorf("environment %q not found", name)
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	relPath, _ := filepath.Rel(ctx.CWD, environment.Path)
+	relPath, _ := filepath.Rel(resolved.Ctx.CWD, resolved.Environment.Path)
 	if relPath == "" {
-		relPath = environment.Path
+		relPath = resolved.Environment.Path
 	}
 
-	sessionName := tmux.SessionName(ctx.Project.Name, name)
+	sessionName := tmux.SessionName(resolved.Project.Name, name)
 	tmuxStatus := "not running"
 	if tmux.SessionExists(sessionName) {
 		tmuxStatus = sessionName
 	}
 
-	fmt.Printf("Environment: %s\n", environment.Name)
-	fmt.Printf("Branch:      %s\n", environment.Branch)
+	fmt.Printf("Environment: %s\n", resolved.Environment.Name)
+	fmt.Printf("Branch:      %s\n", resolved.Environment.Branch)
 	fmt.Printf("Path:        %s\n", relPath)
 	fmt.Printf("Tmux:        %s\n", tmuxStatus)
 
-	isSimpleMode := environment.DockerProject == ""
+	isSimpleMode := resolved.Environment.DockerProject == ""
 
 	if isSimpleMode {
 		fmt.Printf("Mode:        simple\n")
-		dataDir := filepath.Join(ctx.Project.RootPath, ".piko", "data", name)
+		dataDir := filepath.Join(resolved.Project.RootPath, ".piko", "data", name)
 		fmt.Printf("Data dir:    %s\n", dataDir)
-		fmt.Printf("Env ID:      %d\n", environment.ID)
+		fmt.Printf("Env ID:      %d\n", resolved.Environment.ID)
 	} else {
-		fmt.Printf("Docker:      %s\n", environment.DockerProject)
+		fmt.Printf("Docker:      %s\n", resolved.Environment.DockerProject)
 
-		containers, running, total := getContainerStatus(composeDir, environment.DockerProject)
+		containers, running, total := getContainerStatus(resolved.ComposeDir, resolved.Environment.DockerProject)
 
 		if total == 0 {
 			fmt.Printf("Status:      stopped (no containers)\n")
