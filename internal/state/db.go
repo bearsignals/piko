@@ -60,19 +60,19 @@ func OpenCentral() (*DB, error) {
 }
 
 func Open(path string) (*DB, error) {
-	conn, err := sql.Open("sqlite", path)
+	dsn := path + "?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)"
+	conn, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
-	}
+	conn.SetMaxOpenConns(1)
+	conn.SetMaxIdleConns(1)
+	conn.SetConnMaxLifetime(0)
 
-	if _, err := conn.Exec("PRAGMA journal_mode = WAL"); err != nil {
+	if err := conn.Ping(); err != nil {
 		conn.Close()
-		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	return &DB{conn: conn, path: path}, nil

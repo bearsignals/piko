@@ -49,8 +49,11 @@ func (s *Server) Start() error {
 	mux.Handle("GET /", http.FileServer(http.FS(staticFS)))
 
 	s.server = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.port),
-		Handler: mux,
+		Addr:         fmt.Sprintf(":%d", s.port),
+		Handler:      http.TimeoutHandler(mux, 60*time.Second, "request timeout"),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	done := make(chan os.Signal, 1)

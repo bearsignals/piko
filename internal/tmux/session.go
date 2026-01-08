@@ -5,7 +5,12 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
+
+	"github.com/gwuah/piko/internal/run"
 )
+
+const tmuxTimeout = 5 * time.Second
 
 func SessionName(projectName, envName string) string {
 	return fmt.Sprintf("piko/%s/%s", projectName, envName)
@@ -16,13 +21,16 @@ func IsInsideTmux() bool {
 }
 
 func SessionExists(sessionName string) bool {
-	cmd := exec.Command("tmux", "has-session", "-t", sessionName)
-	return cmd.Run() == nil
+	err := run.Command("tmux", "has-session", "-t", sessionName).
+		Timeout(tmuxTimeout).
+		Run()
+	return err == nil
 }
 
 func CreateSession(sessionName, workDir string) error {
-	cmd := exec.Command("tmux", "new-session", "-d", "-s", sessionName, "-c", workDir)
-	output, err := cmd.CombinedOutput()
+	output, err := run.Command("tmux", "new-session", "-d", "-s", sessionName, "-c", workDir).
+		Timeout(tmuxTimeout).
+		CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to create session: %s: %w", string(output), err)
 	}
@@ -30,28 +38,32 @@ func CreateSession(sessionName, workDir string) error {
 }
 
 func RenameWindow(sessionName, windowName string) error {
-	cmd := exec.Command("tmux", "rename-window", "-t", sessionName, windowName)
-	return cmd.Run()
+	return run.Command("tmux", "rename-window", "-t", sessionName, windowName).
+		Timeout(tmuxTimeout).
+		Run()
 }
 
 func NewWindow(sessionName, windowName, workDir, command string) error {
-	cmd := exec.Command("tmux", "new-window", "-t", sessionName, "-n", windowName, "-c", workDir)
-	output, err := cmd.CombinedOutput()
+	output, err := run.Command("tmux", "new-window", "-t", sessionName, "-n", windowName, "-c", workDir).
+		Timeout(tmuxTimeout).
+		CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to create window: %s: %w", string(output), err)
 	}
 
 	if command != "" {
-		sendCmd := exec.Command("tmux", "send-keys", "-t", fmt.Sprintf("%s:%s", sessionName, windowName), command, "Enter")
-		sendCmd.Run()
+		run.Command("tmux", "send-keys", "-t", fmt.Sprintf("%s:%s", sessionName, windowName), command, "Enter").
+			Timeout(tmuxTimeout).
+			Run()
 	}
 
 	return nil
 }
 
 func SendKeys(sessionName, windowName, keys string) error {
-	cmd := exec.Command("tmux", "send-keys", "-t", fmt.Sprintf("%s:%s", sessionName, windowName), keys, "Enter")
-	return cmd.Run()
+	return run.Command("tmux", "send-keys", "-t", fmt.Sprintf("%s:%s", sessionName, windowName), keys, "Enter").
+		Timeout(tmuxTimeout).
+		Run()
 }
 
 func Attach(sessionName string) error {
@@ -71,13 +83,15 @@ func KillSession(sessionName string) error {
 	if !SessionExists(sessionName) {
 		return nil
 	}
-	cmd := exec.Command("tmux", "kill-session", "-t", sessionName)
-	return cmd.Run()
+	return run.Command("tmux", "kill-session", "-t", sessionName).
+		Timeout(tmuxTimeout).
+		Run()
 }
 
 func ListPikoSessions() ([]string, error) {
-	cmd := exec.Command("tmux", "list-sessions", "-F", "#{session_name}")
-	output, err := cmd.Output()
+	output, err := run.Command("tmux", "list-sessions", "-F", "#{session_name}").
+		Timeout(tmuxTimeout).
+		Output()
 	if err != nil {
 		return nil, nil
 	}

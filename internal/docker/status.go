@@ -1,8 +1,10 @@
 package docker
 
 import (
-	"os/exec"
 	"strings"
+	"time"
+
+	"github.com/gwuah/piko/internal/run"
 )
 
 type ContainerStatus string
@@ -13,11 +15,13 @@ const (
 	StatusUnknown ContainerStatus = "unknown"
 )
 
-func GetProjectStatus(workDir, projectName string) ContainerStatus {
-	cmd := exec.Command("docker", "compose", "-p", projectName, "ps", "-q")
-	cmd.Dir = workDir
+const dockerTimeout = 10 * time.Second
 
-	output, err := cmd.Output()
+func GetProjectStatus(workDir, projectName string) ContainerStatus {
+	output, err := run.Command("docker", "compose", "-p", projectName, "ps", "-q").
+		Dir(workDir).
+		Timeout(dockerTimeout).
+		Output()
 	if err != nil {
 		return StatusUnknown
 	}
@@ -26,10 +30,10 @@ func GetProjectStatus(workDir, projectName string) ContainerStatus {
 		return StatusStopped
 	}
 
-	cmd = exec.Command("docker", "compose", "-p", projectName, "ps", "--status", "running", "-q")
-	cmd.Dir = workDir
-
-	output, err = cmd.Output()
+	output, err = run.Command("docker", "compose", "-p", projectName, "ps", "--status", "running", "-q").
+		Dir(workDir).
+		Timeout(dockerTimeout).
+		Output()
 	if err != nil {
 		return StatusUnknown
 	}

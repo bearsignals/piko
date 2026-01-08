@@ -8,11 +8,15 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gwuah/piko/internal/docker"
 	"github.com/gwuah/piko/internal/operations"
+	"github.com/gwuah/piko/internal/run"
 	"github.com/gwuah/piko/internal/state"
 )
+
+const handlerDockerTimeout = 10 * time.Second
 
 type ProjectResponse struct {
 	ID          int64  `json:"id"`
@@ -179,9 +183,10 @@ func (s *Server) getEnvironmentDetails(composeDir, dockerProject string) ([]Port
 	running := 0
 	total := 0
 
-	cmd := exec.Command("docker", "compose", "-p", dockerProject, "ps", "--format", "json")
-	cmd.Dir = composeDir
-	output, err := cmd.Output()
+	output, err := run.Command("docker", "compose", "-p", dockerProject, "ps", "--format", "json").
+		Dir(composeDir).
+		Timeout(handlerDockerTimeout).
+		Output()
 	if err != nil {
 		return portMappings, containers, running, total
 	}
