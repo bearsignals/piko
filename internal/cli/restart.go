@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/gwuah/piko/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -28,38 +27,27 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		service = args[1]
 	}
 
-	cwd, err := os.Getwd()
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+		return err
 	}
+	defer ctx.Close()
 
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	db, err := state.Open(dbPath)
-	if err != nil {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
-	}
-	defer db.Close()
-
-	project, err := db.GetProject()
-	if err != nil {
-		return fmt.Errorf("failed to get project: %w", err)
-	}
-
-	env, err := db.GetEnvironmentByName(name)
+	environment, err := ctx.GetEnvironment(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	composeDir := env.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(env.Path, project.ComposeDir)
+	composeDir := environment.Path
+	if ctx.Project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
 	}
 
 	var composeCmd *exec.Cmd
 	if service != "" {
-		composeCmd = exec.Command("docker", "compose", "-p", env.DockerProject, "restart", service)
+		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "restart", service)
 	} else {
-		composeCmd = exec.Command("docker", "compose", "-p", env.DockerProject, "restart")
+		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "restart")
 	}
 
 	composeCmd.Dir = composeDir

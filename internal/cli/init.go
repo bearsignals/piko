@@ -57,28 +57,28 @@ func runInit(cmd *cobra.Command, args []string) error {
 		fmt.Printf("✓ Detected %s\n", composeFile)
 	}
 
-	pikoDir := filepath.Join(cwd, ".piko")
-	dbPath := filepath.Join(pikoDir, "state.db")
-	if _, err := os.Stat(dbPath); err == nil {
-		return fmt.Errorf("already initialized (run 'piko status' to see state)")
-	}
-
-	if err := os.MkdirAll(pikoDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .piko: %w", err)
-	}
-
-	db, err := state.Open(dbPath)
+	db, err := state.OpenCentral()
 	if err != nil {
-		os.RemoveAll(pikoDir)
-		return fmt.Errorf("failed to create database: %w", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
 	if err := db.Initialize(); err != nil {
-		os.RemoveAll(pikoDir)
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	fmt.Println("✓ Created .piko/state.db")
+
+	exists, err := db.ProjectExistsByPath(cwd)
+	if err != nil {
+		return fmt.Errorf("failed to check project: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("already initialized (run 'piko list' to see environments)")
+	}
+
+	pikoDir := filepath.Join(cwd, ".piko")
+	if err := os.MkdirAll(pikoDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .piko: %w", err)
+	}
 
 	projectName := filepath.Base(cwd)
 	project := &state.Project{
@@ -91,6 +91,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 		os.RemoveAll(pikoDir)
 		return fmt.Errorf("failed to save project: %w", err)
 	}
+
+	dbPath, _ := state.CentralDBPath()
+	fmt.Printf("✓ Registered project in %s\n", dbPath)
 
 	if err := updateGitignore(cwd); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not update .gitignore: %v\n", err)

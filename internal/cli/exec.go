@@ -8,7 +8,6 @@ import (
 
 	"github.com/gwuah/piko/internal/config"
 	"github.com/gwuah/piko/internal/docker"
-	"github.com/gwuah/piko/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -50,31 +49,20 @@ func runShell(cmd *cobra.Command, args []string) error {
 }
 
 func executeInContainer(name, service string, command []string) error {
-	cwd, err := os.Getwd()
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+		return err
 	}
+	defer ctx.Close()
 
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	db, err := state.Open(dbPath)
-	if err != nil {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
-	}
-	defer db.Close()
-
-	project, err := db.GetProject()
-	if err != nil {
-		return fmt.Errorf("failed to get project: %w", err)
-	}
-
-	environment, err := db.GetEnvironmentByName(name)
+	environment, err := ctx.GetEnvironment(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
 	composeDir := environment.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	if ctx.Project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
 	}
 
 	status := docker.GetProjectStatus(composeDir, environment.DockerProject)
@@ -83,7 +71,7 @@ func executeInContainer(name, service string, command []string) error {
 	}
 
 	if len(command) == 0 {
-		cfg, _ := config.Load(cwd)
+		cfg, _ := config.Load(ctx.Project.RootPath)
 		if cfg != nil && cfg.Shells != nil {
 			if shell, ok := cfg.Shells[service]; ok {
 				command = []string{"sh", "-c", shell}

@@ -18,30 +18,28 @@ import (
 var staticFiles embed.FS
 
 type Server struct {
-	port    int
-	db      *state.DB
-	rootDir string
-	server  *http.Server
+	port   int
+	db     *state.DB
+	server *http.Server
 }
 
-func New(port int, db *state.DB, rootDir string) *Server {
+func New(port int, db *state.DB) *Server {
 	return &Server{
-		port:    port,
-		db:      db,
-		rootDir: rootDir,
+		port: port,
+		db:   db,
 	}
 }
 
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/project", s.handleGetProject)
-	mux.HandleFunc("GET /api/environments", s.handleListEnvironments)
-	mux.HandleFunc("GET /api/environments/{name}", s.handleGetEnvironment)
-	mux.HandleFunc("POST /api/environments", s.handleCreateEnvironment)
-	mux.HandleFunc("POST /api/environments/{name}/open", s.handleOpenInEditor)
-	mux.HandleFunc("POST /api/environments/{name}/up", s.handleUp)
-	mux.HandleFunc("POST /api/environments/{name}/down", s.handleDown)
+	mux.HandleFunc("GET /api/projects", s.handleListProjects)
+	mux.HandleFunc("GET /api/projects/{projectID}/environments", s.handleListEnvironments)
+	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}", s.handleGetEnvironment)
+	mux.HandleFunc("POST /api/projects/{projectID}/environments", s.handleCreateEnvironment)
+	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/open", s.handleOpenInEditor)
+	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/up", s.handleUp)
+	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/down", s.handleDown)
 
 	staticFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {

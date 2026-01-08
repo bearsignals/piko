@@ -8,7 +8,6 @@ import (
 
 	"github.com/gwuah/piko/internal/docker"
 	"github.com/gwuah/piko/internal/ports"
-	"github.com/gwuah/piko/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -25,31 +24,21 @@ func init() {
 
 func runUp(cmd *cobra.Command, args []string) error {
 	name := args[0]
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
 
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	db, err := state.Open(dbPath)
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
+		return err
 	}
-	defer db.Close()
+	defer ctx.Close()
 
-	project, err := db.GetProject()
-	if err != nil {
-		return fmt.Errorf("failed to get project: %w", err)
-	}
-
-	env, err := db.GetEnvironmentByName(name)
+	environment, err := ctx.GetEnvironment(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	composeDir := env.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(env.Path, project.ComposeDir)
+	composeDir := environment.Path
+	if ctx.Project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
 	}
 
 	composeConfig, err := docker.ParseComposeConfig(composeDir)
@@ -58,17 +47,15 @@ func runUp(cmd *cobra.Command, args []string) error {
 	}
 
 	servicePorts := composeConfig.GetServicePorts()
-	allocations := ports.Allocate(env.ID, servicePorts)
+	allocations := ports.Allocate(environment.ID, servicePorts)
 
 	composeProject := composeConfig.Project()
-	docker.ApplyOverrides(composeProject, project.Name, name, allocations)
+	docker.ApplyOverrides(composeProject, ctx.Project.Name, name, allocations)
 	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
-		return fmt.Errorf("failed to write compose file: %w", err)
-	}
+	docker.WriteProjectFile(pikoComposePath, composeProject)
 
 	composeCmd := exec.Command("docker", "compose",
-		"-p", env.DockerProject,
+		"-p", environment.DockerProject,
 		"-f", "docker-compose.piko.yml",
 		"up", "-d")
 	composeCmd.Dir = composeDir
@@ -79,6 +66,6 @@ func runUp(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start containers: %w", err)
 	}
 
-	fmt.Println("✓ Started containers")
+	fmt.Printf("✓ Started containers (%s)\n", environment.DockerProject)
 	return nil
 }

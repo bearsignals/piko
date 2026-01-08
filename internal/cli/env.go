@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -32,33 +31,21 @@ func init() {
 
 func runEnv(cmd *cobra.Command, args []string) error {
 	name := args[0]
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
 
-	// 1. Open database
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	db, err := state.Open(dbPath)
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
+		return err
 	}
-	defer db.Close()
+	defer ctx.Close()
 
-	// 2. Get project and environment
-	project, err := db.GetProject()
-	if err != nil {
-		return fmt.Errorf("failed to get project: %w", err)
-	}
-
-	environment, err := db.GetEnvironmentByName(name)
+	environment, err := ctx.GetEnvironment(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
 	composeDir := environment.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	if ctx.Project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
 	}
 
 	allocations, err := discoverPorts(environment, composeDir)
@@ -66,10 +53,8 @@ func runEnv(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to discover ports: %w", err)
 	}
 
-	// 4. Build env
-	pikoEnv := env.Build(project, environment, allocations)
+	pikoEnv := env.Build(ctx.Project, environment, allocations)
 
-	// 5. Output
 	if envJSON {
 		data, err := pikoEnv.ToJSON()
 		if err != nil {
@@ -100,10 +85,9 @@ func discoverPorts(environment *state.Environment, composeDir string) ([]ports.A
 
 			output, err := cmd.Output()
 			if err != nil {
-				continue // Service might not be running
+				continue
 			}
 
-			// Output is like "0.0.0.0:10132" or "[::]:10132"
 			outputStr := strings.TrimSpace(string(output))
 			parts := strings.Split(outputStr, ":")
 			if len(parts) >= 2 {

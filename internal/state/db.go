@@ -3,15 +3,17 @@ package state
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	_ "modernc.org/sqlite"
 )
 
 const schema = `
-CREATE TABLE IF NOT EXISTS project (
+CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    root_path TEXT NOT NULL,
+    name TEXT NOT NULL,
+    root_path TEXT UNIQUE NOT NULL,
     compose_file TEXT DEFAULT 'docker-compose.yml',
     compose_dir TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -19,7 +21,7 @@ CREATE TABLE IF NOT EXISTS project (
 
 CREATE TABLE IF NOT EXISTS environments (
     id INTEGER PRIMARY KEY,
-    project_id INTEGER REFERENCES project(id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     branch TEXT NOT NULL,
     path TEXT NOT NULL,
@@ -30,13 +32,35 @@ CREATE TABLE IF NOT EXISTS environments (
 );
 `
 
-const migration = `
-ALTER TABLE project ADD COLUMN compose_dir TEXT DEFAULT '';
-`
-
 type DB struct {
 	conn *sql.DB
 	path string
+}
+
+func CentralDBPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get home directory: %w", err)
+		}
+		configDir = filepath.Join(home, ".config")
+	}
+
+	pikoDir := filepath.Join(configDir, "piko")
+	if err := os.MkdirAll(pikoDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create piko config directory: %w", err)
+	}
+
+	return filepath.Join(pikoDir, "state.db"), nil
+}
+
+func OpenCentral() (*DB, error) {
+	path, err := CentralDBPath()
+	if err != nil {
+		return nil, err
+	}
+	return Open(path)
 }
 
 func Open(path string) (*DB, error) {
@@ -48,6 +72,11 @@ func Open(path string) (*DB, error) {
 	if _, err := conn.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
+
+	if _, err := conn.Exec("PRAGMA journal_mode = WAL"); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
 	}
 
 	return &DB{conn: conn, path: path}, nil
@@ -62,10 +91,5 @@ func (db *DB) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
-	return nil
-}
-
-func (db *DB) Migrate() error {
-	db.conn.Exec(migration)
 	return nil
 }

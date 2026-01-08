@@ -3,12 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/gwuah/piko/internal/state"
 	"github.com/gwuah/piko/internal/tmux"
 	"github.com/spf13/cobra"
 )
@@ -25,49 +23,39 @@ func init() {
 }
 
 type containerInfo struct {
-	Service   string `json:"Service"`
-	State     string `json:"State"`
-	Status    string `json:"Status"`
-	Ports     string `json:"Ports"`
-	Name      string `json:"Name"`
-	Health    string `json:"Health"`
+	Service string `json:"Service"`
+	State   string `json:"State"`
+	Status  string `json:"Status"`
+	Ports   string `json:"Ports"`
+	Name    string `json:"Name"`
+	Health  string `json:"Health"`
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	name := args[0]
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
 
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	db, err := state.Open(dbPath)
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
+		return err
 	}
-	defer db.Close()
+	defer ctx.Close()
 
-	project, err := db.GetProject()
-	if err != nil {
-		return fmt.Errorf("failed to get project: %w", err)
-	}
-
-	environment, err := db.GetEnvironmentByName(name)
+	environment, err := ctx.GetEnvironment(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
 	composeDir := environment.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	if ctx.Project.ComposeDir != "" {
+		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
 	}
 
-	relPath, _ := filepath.Rel(cwd, environment.Path)
+	relPath, _ := filepath.Rel(ctx.CWD, environment.Path)
 	if relPath == "" {
 		relPath = environment.Path
 	}
 
-	sessionName := tmux.SessionName(project.Name, name)
+	sessionName := tmux.SessionName(ctx.Project.Name, name)
 	tmuxStatus := "not running"
 	if tmux.SessionExists(sessionName) {
 		tmuxStatus = sessionName

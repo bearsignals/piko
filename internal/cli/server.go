@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/gwuah/piko/internal/server"
 	"github.com/gwuah/piko/internal/state"
@@ -24,22 +22,16 @@ func init() {
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
-	}
-
-	db, err := state.Open(dbPath)
+	db, err := state.OpenCentral()
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer db.Close()
 
-	srv := server.New(serverPort, db, cwd)
+	if err := db.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize database: %w", err)
+	}
+
+	srv := server.New(serverPort, db)
 	return srv.Start()
 }

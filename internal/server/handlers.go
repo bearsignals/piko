@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gwuah/piko/internal/config"
@@ -17,6 +18,7 @@ import (
 )
 
 type ProjectResponse struct {
+	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Path        string `json:"path"`
 	Initialized bool   `json:"initialized"`
@@ -57,28 +59,43 @@ type SuccessResponse struct {
 	Error       string               `json:"error,omitempty"`
 }
 
-func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
-	project, err := s.db.GetProject()
-	if err != nil {
-		writeJSON(w, http.StatusOK, ProjectResponse{Initialized: false})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, ProjectResponse{
-		Name:        project.Name,
-		Path:        project.RootPath,
-		Initialized: true,
-	})
-}
-
-func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) {
-	project, err := s.db.GetProject()
+func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request) {
+	projects, err := s.db.ListProjects()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	environments, err := s.db.ListEnvironments()
+	response := make([]ProjectResponse, 0, len(projects))
+	for _, p := range projects {
+		response = append(response, ProjectResponse{
+			ID:          p.ID,
+			Name:        p.Name,
+			Path:        p.RootPath,
+			Initialized: true,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) getProjectFromPath(r *http.Request) (*state.Project, error) {
+	projectIDStr := r.PathValue("projectID")
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid project ID")
+	}
+	return s.db.GetProjectByID(projectID)
+}
+
+func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) {
+	project, err := s.getProjectFromPath(r)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	environments, err := s.db.ListEnvironmentsByProject(project.ID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
@@ -112,13 +129,13 @@ func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) 
 func (s *Server) handleGetEnvironment(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
-	project, err := s.db.GetProject()
+	project, err := s.getProjectFromPath(r)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	environment, err := s.db.GetEnvironmentByName(name)
+	environment, err := s.db.GetEnvironmentByName(project.ID, name)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
 		return
@@ -235,7 +252,13 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	exists, err := s.db.EnvironmentExists(req.Name)
+	project, err := s.getProjectFromPath(r)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	exists, err := s.db.EnvironmentExists(project.ID, req.Name)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
@@ -245,13 +268,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	project, err := s.db.GetProject()
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
-		return
-	}
-
-	worktreesDir := filepath.Join(s.rootDir, ".piko", "worktrees")
+	worktreesDir := filepath.Join(project.RootPath, ".piko", "worktrees")
 
 	wtOpts := git.WorktreeOptions{
 		Name:       req.Name,
@@ -299,7 +316,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	docker.ApplyOverrides(composeProject, project.Name, req.Name, allocations)
 	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
 	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
-		s.db.DeleteEnvironment(req.Name)
+		s.db.DeleteEnvironment(project.ID, req.Name)
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
@@ -312,13 +329,13 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	composeCmd.Dir = composeDir
 
 	if err := composeCmd.Run(); err != nil {
-		s.db.DeleteEnvironment(req.Name)
+		s.db.DeleteEnvironment(project.ID, req.Name)
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to start containers"})
 		return
 	}
 
-	cfg, _ := config.Load(s.rootDir)
+	cfg, _ := config.Load(project.RootPath)
 	if cfg != nil && cfg.Scripts.Setup != "" {
 		pikoEnv := env.Build(project, environment, allocations)
 		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
@@ -339,7 +356,13 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleOpenInEditor(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
-	environment, err := s.db.GetEnvironmentByName(name)
+	project, err := s.getProjectFromPath(r)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	environment, err := s.db.GetEnvironmentByName(project.ID, name)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
 		return
@@ -367,13 +390,13 @@ func (s *Server) handleOpenInEditor(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
-	project, err := s.db.GetProject()
+	project, err := s.getProjectFromPath(r)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	environment, err := s.db.GetEnvironmentByName(name)
+	environment, err := s.db.GetEnvironmentByName(project.ID, name)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
 		return
@@ -415,13 +438,13 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDown(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 
-	project, err := s.db.GetProject()
+	project, err := s.getProjectFromPath(r)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	environment, err := s.db.GetEnvironmentByName(name)
+	environment, err := s.db.GetEnvironmentByName(project.ID, name)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
 		return

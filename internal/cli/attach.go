@@ -2,10 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/gwuah/piko/internal/state"
 	"github.com/gwuah/piko/internal/tmux"
 	"github.com/spf13/cobra"
 )
@@ -28,29 +25,18 @@ func runAttach(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("already inside tmux (use 'piko switch %s' instead)", name)
 	}
 
-	cwd, err := os.Getwd()
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("failed to get current directory: %w", err)
+		return err
 	}
+	defer ctx.Close()
 
-	dbPath := filepath.Join(cwd, ".piko", "state.db")
-	db, err := state.Open(dbPath)
-	if err != nil {
-		return fmt.Errorf("not initialized (run 'piko init' first)")
-	}
-	defer db.Close()
-
-	project, err := db.GetProject()
-	if err != nil {
-		return fmt.Errorf("failed to get project: %w", err)
-	}
-
-	_, err = db.GetEnvironmentByName(name)
+	_, err = ctx.GetEnvironment(name)
 	if err != nil {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
-	sessionName := tmux.SessionName(project.Name, name)
+	sessionName := tmux.SessionName(ctx.Project.Name, name)
 
 	if !tmux.SessionExists(sessionName) {
 		return fmt.Errorf("session does not exist (run 'piko up %s' first)", name)
