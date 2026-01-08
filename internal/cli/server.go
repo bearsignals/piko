@@ -1,10 +1,7 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/gwuah/piko/internal/server"
-	"github.com/gwuah/piko/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -22,16 +19,12 @@ func init() {
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
-	db, err := state.OpenCentral()
+	ctx, err := NewContext()
 	if err != nil {
-		return fmt.Errorf("failed to open database: %w", err)
+		return err
 	}
-	defer db.Close()
+	defer ctx.Close()
 
-	if err := db.Initialize(); err != nil {
-		return fmt.Errorf("failed to initialize database: %w", err)
-	}
-
-	srv := server.New(serverPort, db)
+	srv := server.New(serverPort, ctx.DB)
 	return srv.Start()
 }

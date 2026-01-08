@@ -19,9 +19,9 @@ func NewContext() (*Context, error) {
 		return nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	db, err := state.OpenCentral()
+	db, projectRoot, err := state.OpenLocal(cwd)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, err
 	}
 
 	if err := db.Initialize(); err != nil {
@@ -29,10 +29,10 @@ func NewContext() (*Context, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	project, err := db.FindProjectByPath(cwd)
+	project, err := db.GetProjectByPath(projectRoot)
 	if err != nil {
 		db.Close()
-		return nil, err
+		return nil, fmt.Errorf("project data corrupted: %w", err)
 	}
 
 	return &Context{
@@ -48,9 +48,9 @@ func NewContextWithoutProject() (*Context, error) {
 		return nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	db, err := state.OpenCentral()
+	db, _, err := state.OpenLocal(cwd)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, err
 	}
 
 	if err := db.Initialize(); err != nil {

@@ -37,30 +37,52 @@ type DB struct {
 	path string
 }
 
-func CentralDBPath() (string, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
+func FindPikoRoot(startPath string) (string, error) {
+	cleanPath := filepath.Clean(startPath)
+
+	for {
+		pikoDir := filepath.Join(cleanPath, ".piko")
+		if info, err := os.Stat(pikoDir); err == nil && info.IsDir() {
+			return cleanPath, nil
 		}
-		configDir = filepath.Join(home, ".config")
+
+		parent := filepath.Dir(cleanPath)
+		if parent == cleanPath {
+			break
+		}
+		cleanPath = parent
 	}
 
-	pikoDir := filepath.Join(configDir, "piko")
-	if err := os.MkdirAll(pikoDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create piko config directory: %w", err)
-	}
-
-	return filepath.Join(pikoDir, "state.db"), nil
+	return "", fmt.Errorf("not in a piko project (run 'piko init' first)")
 }
 
-func OpenCentral() (*DB, error) {
-	path, err := CentralDBPath()
+func LocalDBPath(projectRoot string) string {
+	return filepath.Join(projectRoot, ".piko", "state.db")
+}
+
+func OpenLocal(startPath string) (*DB, string, error) {
+	projectRoot, err := FindPikoRoot(startPath)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return Open(path)
+
+	dbPath := LocalDBPath(projectRoot)
+	db, err := Open(dbPath)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return db, projectRoot, nil
+}
+
+func CreateLocal(projectRoot string) (*DB, error) {
+	pikoDir := filepath.Join(projectRoot, ".piko")
+	if err := os.MkdirAll(pikoDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create .piko directory: %w", err)
+	}
+
+	dbPath := LocalDBPath(projectRoot)
+	return Open(dbPath)
 }
 
 func Open(path string) (*DB, error) {

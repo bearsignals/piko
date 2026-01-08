@@ -16,6 +16,7 @@ import (
 	"github.com/gwuah/piko/internal/git"
 	"github.com/gwuah/piko/internal/ports"
 	"github.com/gwuah/piko/internal/state"
+	"github.com/gwuah/piko/internal/tmux"
 )
 
 type ProjectResponse struct {
@@ -333,7 +334,19 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	}
 	environment.ID = envID
 
+	sessionName := tmux.SessionName(project.Name, req.Name)
+	cfg, _ := config.Load(project.RootPath)
+
 	if isSimpleMode {
+		tmuxCfg := tmux.SessionConfig{
+			SessionName: sessionName,
+			WorkDir:     wt.Path,
+		}
+		if cfg != nil {
+			tmuxCfg.Shells = cfg.Shells
+		}
+		tmux.CreateFullSession(tmuxCfg)
+
 		writeJSON(w, http.StatusOK, SuccessResponse{
 			Success: true,
 			Environment: &EnvironmentResponse{
@@ -386,12 +399,27 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cfg, _ := config.Load(project.RootPath)
 	if cfg != nil && cfg.Scripts.Setup != "" {
 		pikoEnv := env.Build(project, environment, allocations)
 		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
 		runner.RunSetup(cfg.Scripts.Setup)
 	}
+
+	var services []string
+	if composeConfig != nil {
+		services = composeConfig.GetServiceNames()
+	}
+
+	tmuxCfg := tmux.SessionConfig{
+		SessionName:   sessionName,
+		WorkDir:       wt.Path,
+		DockerProject: dockerProject,
+		Services:      services,
+	}
+	if cfg != nil {
+		tmuxCfg.Shells = cfg.Shells
+	}
+	tmux.CreateFullSession(tmuxCfg)
 
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Success: true,
