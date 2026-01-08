@@ -53,7 +53,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.Load(ctx.Project.RootPath)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		cfg = &config.Config{}
 	}
 
 	worktreesDir := ctx.Project.WorktreesDir()
@@ -72,7 +72,15 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("✓ Created worktree at %s (branch: %s)\n", wt.Path, wt.Branch)
 
+	dataDir := filepath.Join(ctx.Project.RootPath, ".piko", "data", name)
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		git.RemoveWorktree(wt.Path)
+		return fmt.Errorf("failed to create data directory: %w", err)
+	}
+	fmt.Printf("✓ Created data directory at %s\n", dataDir)
+
 	cleanup := func() {
+		os.RemoveAll(dataDir)
 		git.RemoveWorktree(wt.Path)
 	}
 
@@ -81,13 +89,13 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		composeDir = filepath.Join(wt.Path, ctx.Project.ComposeDir)
 	}
 
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
-	if err != nil {
-		cleanup()
-		return fmt.Errorf("failed to parse compose config: %w", err)
-	}
+	_, composeErr := docker.DetectComposeFile(composeDir)
+	isSimpleMode := composeErr != nil
 
-	dockerProject := fmt.Sprintf("piko-%s-%s", ctx.Project.Name, name)
+	dockerProject := ""
+	if !isSimpleMode {
+		dockerProject = fmt.Sprintf("piko-%s-%s", ctx.Project.Name, name)
+	}
 	sessionName := tmux.SessionName(ctx.Project.Name, name)
 
 	environment := &state.Environment{
@@ -109,17 +117,29 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		cleanup()
 	}
 
-	servicePorts := composeConfig.GetServicePorts()
-	allocations := ports.Allocate(envID, servicePorts)
+	var allocations []ports.Allocation
 
-	composeProject := composeConfig.Project()
-	docker.ApplyOverrides(composeProject, ctx.Project.Name, name, allocations)
-	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
-	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
-		cleanupWithDB()
-		return fmt.Errorf("failed to write compose file: %w", err)
+	if isSimpleMode {
+		fmt.Println("✓ Simple mode (no docker-compose found)")
+	} else {
+		composeConfig, err := docker.ParseComposeConfig(composeDir)
+		if err != nil {
+			cleanupWithDB()
+			return fmt.Errorf("failed to parse compose config: %w", err)
+		}
+
+		servicePorts := composeConfig.GetServicePorts()
+		allocations = ports.Allocate(envID, servicePorts)
+
+		composeProject := composeConfig.Project()
+		docker.ApplyOverrides(composeProject, ctx.Project.Name, name, allocations)
+		pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
+		if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
+			cleanupWithDB()
+			return fmt.Errorf("failed to write compose file: %w", err)
+		}
+		fmt.Println("✓ Generated docker-compose.piko.yml")
 	}
-	fmt.Println("✓ Generated docker-compose.piko.yml")
 
 	if cfg.Scripts.Prepare != "" {
 		pikoEnv := env.Build(ctx.Project, environment, allocations)
@@ -133,25 +153,28 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		fmt.Println("✓ Ran prepare script")
 	}
 
-	composeCmd := exec.Command("docker", "compose",
-		"-p", dockerProject,
-		"-f", "docker-compose.piko.yml",
-		"up", "-d")
-	composeCmd.Dir = composeDir
-	composeCmd.Stdout = os.Stdout
-	composeCmd.Stderr = os.Stderr
+	cleanupWithContainers := cleanupWithDB
+	if !isSimpleMode {
+		composeCmd := exec.Command("docker", "compose",
+			"-p", dockerProject,
+			"-f", "docker-compose.piko.yml",
+			"up", "-d")
+		composeCmd.Dir = composeDir
+		composeCmd.Stdout = os.Stdout
+		composeCmd.Stderr = os.Stderr
 
-	if err := composeCmd.Run(); err != nil {
-		cleanupWithDB()
-		return fmt.Errorf("failed to start containers: %w", err)
-	}
-	fmt.Printf("✓ Started containers (%s)\n", dockerProject)
+		if err := composeCmd.Run(); err != nil {
+			cleanupWithDB()
+			return fmt.Errorf("failed to start containers: %w", err)
+		}
+		fmt.Printf("✓ Started containers (%s)\n", dockerProject)
 
-	cleanupWithContainers := func() {
-		stopCmd := exec.Command("docker", "compose", "-p", dockerProject, "down")
-		stopCmd.Dir = composeDir
-		stopCmd.Run()
-		cleanupWithDB()
+		cleanupWithContainers = func() {
+			stopCmd := exec.Command("docker", "compose", "-p", dockerProject, "down")
+			stopCmd.Dir = composeDir
+			stopCmd.Run()
+			cleanupWithDB()
+		}
 	}
 
 	if cfg.Scripts.Setup != "" {
@@ -166,7 +189,14 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		fmt.Println("✓ Ran setup script")
 	}
 
-	services := composeConfig.GetServiceNames()
+	var services []string
+	if !isSimpleMode {
+		composeConfig, _ := docker.ParseComposeConfig(composeDir)
+		if composeConfig != nil {
+			services = composeConfig.GetServiceNames()
+		}
+	}
+
 	tmuxCfg := tmux.SessionConfig{
 		SessionName:   sessionName,
 		WorkDir:       wt.Path,

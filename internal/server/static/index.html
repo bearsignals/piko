@@ -165,6 +165,9 @@
         .status-dot.unknown {
             background: #f59e0b;
         }
+        .status-dot.simple {
+            background: #8b5cf6;
+        }
         .env-branch {
             color: #888;
             font-size: 0.85rem;
@@ -429,6 +432,9 @@
         }
 
         function getStatusText(env) {
+            if (env.mode === 'simple') {
+                return { text: 'simple mode', class: '' };
+            }
             if (env.total === 0) {
                 return { text: env.status, class: '' };
             }
@@ -476,7 +482,9 @@
 
             container.innerHTML = results.map(({ project, environments }) => {
                 const envCount = environments.length;
-                const runningCount = environments.filter(e => e.status === 'running').length;
+                const dockerEnvs = environments.filter(e => e.mode !== 'simple');
+                const runningCount = dockerEnvs.filter(e => e.status === 'running').length;
+                const simpleCount = environments.filter(e => e.mode === 'simple').length;
 
                 let envsHtml;
                 if (environments.length === 0) {
@@ -485,13 +493,19 @@
                     envsHtml = `<div class="env-list">${environments.map(env => renderEnvironment(project, env)).join('')}</div>`;
                 }
 
+                const countText = simpleCount > 0 && dockerEnvs.length > 0
+                    ? `${runningCount}/${dockerEnvs.length} running, ${simpleCount} simple`
+                    : simpleCount > 0
+                        ? `${simpleCount} simple`
+                        : `${runningCount}/${envCount} running`;
+
                 return `
                     <div class="project-section">
                         <div class="project-header">
                             <div>
                                 <div class="project-title">
                                     ${project.name}
-                                    <span class="project-count">${runningCount}/${envCount} running</span>
+                                    <span class="project-count">${countText}</span>
                                 </div>
                                 <div class="project-path">${project.path}</div>
                             </div>
@@ -503,8 +517,29 @@
             }).join('');
         }
 
+        function renderSimpleInfo(env) {
+            if (env.mode !== 'simple') return '';
+            return `
+                <div class="ports-section">
+                    <div class="ports-list">
+                        <div class="port-item">
+                            <span class="port-service">env id</span>
+                            <span class="port-address">${env.envId}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${env.envId}', this)" title="Copy">copy</button>
+                        </div>
+                        <div class="port-item">
+                            <span class="port-service">data dir</span>
+                            <span class="port-address" style="font-size: 0.75rem;">${env.dataDir}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${env.dataDir}', this)" title="Copy">copy</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderEnvironment(project, env) {
             const statusInfo = getStatusText(env);
+            const isSimple = env.mode === 'simple';
             return `
                 <div class="env-card">
                     <div class="env-header">
@@ -515,13 +550,13 @@
                         <span class="status-text ${statusInfo.class}">${statusInfo.text}</span>
                     </div>
                     <div class="env-branch">branch: ${env.branch}</div>
-                    ${renderPorts(env.ports)}
+                    ${isSimple ? renderSimpleInfo(env) : renderPorts(env.ports)}
                     <div class="env-actions" style="margin-top: 0.75rem;">
                         <button class="btn btn-small" onclick="openInEditor(${project.id}, '${env.name}')">Open in Editor</button>
-                        ${env.status === 'running'
+                        ${isSimple ? '' : (env.status === 'running'
                             ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}')">Stop</button>`
                             : `<button class="btn btn-small btn-secondary" onclick="startEnv(${project.id}, '${env.name}')">Start</button>`
-                        }
+                        )}
                     </div>
                 </div>
             `;

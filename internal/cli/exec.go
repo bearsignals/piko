@@ -60,6 +60,10 @@ func executeInContainer(name, service string, command []string) error {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
+	if environment.DockerProject == "" {
+		return fmt.Errorf("simple mode environment - no containers to exec into (use 'piko attach')")
+	}
+
 	composeDir := environment.Path
 	if ctx.Project.ComposeDir != "" {
 		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)

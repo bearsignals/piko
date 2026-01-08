@@ -64,30 +64,40 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Environment: %s\n", environment.Name)
 	fmt.Printf("Branch:      %s\n", environment.Branch)
 	fmt.Printf("Path:        %s\n", relPath)
-	fmt.Printf("Docker:      %s\n", environment.DockerProject)
 	fmt.Printf("Tmux:        %s\n", tmuxStatus)
 
-	containers, running, total := getContainerStatus(composeDir, environment.DockerProject)
+	isSimpleMode := environment.DockerProject == ""
 
-	if total == 0 {
-		fmt.Printf("Status:      stopped (no containers)\n")
-	} else if running == total {
-		fmt.Printf("Status:      running (%d/%d containers)\n", running, total)
-	} else if running == 0 {
-		fmt.Printf("Status:      stopped (%d/%d containers)\n", running, total)
+	if isSimpleMode {
+		fmt.Printf("Mode:        simple\n")
+		dataDir := filepath.Join(ctx.Project.RootPath, ".piko", "data", name)
+		fmt.Printf("Data dir:    %s\n", dataDir)
+		fmt.Printf("Env ID:      %d\n", environment.ID)
 	} else {
-		fmt.Printf("Status:      partial (%d/%d containers running)\n", running, total)
-	}
+		fmt.Printf("Docker:      %s\n", environment.DockerProject)
 
-	if len(containers) > 0 {
-		fmt.Println()
-		fmt.Printf("%-40s %-10s %s\n", "CONTAINER", "STATUS", "PORTS")
-		for _, c := range containers {
-			status := c.State
-			if c.Health != "" {
-				status = fmt.Sprintf("%s (%s)", c.State, c.Health)
+		containers, running, total := getContainerStatus(composeDir, environment.DockerProject)
+
+		if total == 0 {
+			fmt.Printf("Status:      stopped (no containers)\n")
+		} else if running == total {
+			fmt.Printf("Status:      running (%d/%d containers)\n", running, total)
+		} else if running == 0 {
+			fmt.Printf("Status:      stopped (%d/%d containers)\n", running, total)
+		} else {
+			fmt.Printf("Status:      partial (%d/%d containers running)\n", running, total)
+		}
+
+		if len(containers) > 0 {
+			fmt.Println()
+			fmt.Printf("%-40s %-10s %s\n", "CONTAINER", "STATUS", "PORTS")
+			for _, c := range containers {
+				status := c.State
+				if c.Health != "" {
+					status = fmt.Sprintf("%s (%s)", c.State, c.Health)
+				}
+				fmt.Printf("%-40s %-10s %s\n", c.Name, status, c.Ports)
 			}
-			fmt.Printf("%-40s %-10s %s\n", c.Name, status, c.Ports)
 		}
 	}
 

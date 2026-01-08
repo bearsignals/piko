@@ -67,27 +67,31 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
+	isSimpleMode := environment.DockerProject == ""
 
-	var composeCmd *exec.Cmd
-	if destroyVolumes {
-		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "down", "-v")
-	} else {
-		composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "down")
-	}
-	composeCmd.Dir = composeDir
-	composeCmd.Stdout = os.Stdout
-	composeCmd.Stderr = os.Stderr
+	if !isSimpleMode {
+		composeDir := environment.Path
+		if ctx.Project.ComposeDir != "" {
+			composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
+		}
 
-	if err := composeCmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to stop containers: %v\n", err)
-	} else {
-		fmt.Println("✓ Stopped containers")
+		var composeCmd *exec.Cmd
 		if destroyVolumes {
-			fmt.Println("✓ Removed volumes")
+			composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "down", "-v")
+		} else {
+			composeCmd = exec.Command("docker", "compose", "-p", environment.DockerProject, "down")
+		}
+		composeCmd.Dir = composeDir
+		composeCmd.Stdout = os.Stdout
+		composeCmd.Stderr = os.Stderr
+
+		if err := composeCmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to stop containers: %v\n", err)
+		} else {
+			fmt.Println("✓ Stopped containers")
+			if destroyVolumes {
+				fmt.Println("✓ Removed volumes")
+			}
 		}
 	}
 
@@ -95,6 +99,13 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Warning: failed to remove worktree: %v\n", err)
 	} else {
 		fmt.Println("✓ Removed worktree")
+	}
+
+	dataDir := filepath.Join(ctx.Project.RootPath, ".piko", "data", name)
+	if err := os.RemoveAll(dataDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to remove data directory: %v\n", err)
+	} else {
+		fmt.Println("✓ Removed data directory")
 	}
 
 	if err := ctx.DeleteEnvironment(name); err != nil {

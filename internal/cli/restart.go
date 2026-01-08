@@ -38,6 +38,11 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("environment %q not found", name)
 	}
 
+	if environment.DockerProject == "" {
+		fmt.Println("Simple mode environment - no containers to restart")
+		return nil
+	}
+
 	composeDir := environment.Path
 	if ctx.Project.ComposeDir != "" {
 		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)

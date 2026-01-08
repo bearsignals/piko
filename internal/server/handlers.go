@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -46,6 +47,9 @@ type EnvironmentResponse struct {
 	Containers []ContainerInfo `json:"containers,omitempty"`
 	Running    int             `json:"running"`
 	Total      int             `json:"total"`
+	Mode       string          `json:"mode"`
+	DataDir    string          `json:"dataDir,omitempty"`
+	EnvID      int64           `json:"envId,omitempty"`
 }
 
 type CreateRequest struct {
@@ -103,24 +107,30 @@ func (s *Server) handleListEnvironments(w http.ResponseWriter, r *http.Request) 
 
 	response := make([]EnvironmentResponse, 0, len(environments))
 	for _, e := range environments {
-		composeDir := e.Path
-		if project.ComposeDir != "" {
-			composeDir = filepath.Join(e.Path, project.ComposeDir)
+		isSimpleMode := e.DockerProject == ""
+
+		envResp := EnvironmentResponse{
+			Name:   e.Name,
+			Branch: e.Branch,
+			Path:   e.Path,
+			EnvID:  e.ID,
 		}
-		status := docker.GetProjectStatus(composeDir, e.DockerProject)
 
-		portMappings, containers, running, total := s.getEnvironmentDetails(composeDir, e.DockerProject)
+		if isSimpleMode {
+			envResp.Mode = "simple"
+			envResp.Status = "simple"
+			envResp.DataDir = filepath.Join(project.RootPath, ".piko", "data", e.Name)
+		} else {
+			envResp.Mode = "docker"
+			composeDir := e.Path
+			if project.ComposeDir != "" {
+				composeDir = filepath.Join(e.Path, project.ComposeDir)
+			}
+			envResp.Status = string(docker.GetProjectStatus(composeDir, e.DockerProject))
+			envResp.Ports, envResp.Containers, envResp.Running, envResp.Total = s.getEnvironmentDetails(composeDir, e.DockerProject)
+		}
 
-		response = append(response, EnvironmentResponse{
-			Name:       e.Name,
-			Status:     string(status),
-			Branch:     e.Branch,
-			Path:       e.Path,
-			Ports:      portMappings,
-			Containers: containers,
-			Running:    running,
-			Total:      total,
-		})
+		response = append(response, envResp)
 	}
 
 	writeJSON(w, http.StatusOK, response)
@@ -141,24 +151,30 @@ func (s *Server) handleGetEnvironment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composeDir := environment.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, project.ComposeDir)
+	isSimpleMode := environment.DockerProject == ""
+
+	envResp := EnvironmentResponse{
+		Name:   environment.Name,
+		Branch: environment.Branch,
+		Path:   environment.Path,
+		EnvID:  environment.ID,
 	}
 
-	status := docker.GetProjectStatus(composeDir, environment.DockerProject)
-	portMappings, containers, running, total := s.getEnvironmentDetails(composeDir, environment.DockerProject)
+	if isSimpleMode {
+		envResp.Mode = "simple"
+		envResp.Status = "simple"
+		envResp.DataDir = filepath.Join(project.RootPath, ".piko", "data", environment.Name)
+	} else {
+		envResp.Mode = "docker"
+		composeDir := environment.Path
+		if project.ComposeDir != "" {
+			composeDir = filepath.Join(environment.Path, project.ComposeDir)
+		}
+		envResp.Status = string(docker.GetProjectStatus(composeDir, environment.DockerProject))
+		envResp.Ports, envResp.Containers, envResp.Running, envResp.Total = s.getEnvironmentDetails(composeDir, environment.DockerProject)
+	}
 
-	writeJSON(w, http.StatusOK, EnvironmentResponse{
-		Name:       environment.Name,
-		Status:     string(status),
-		Branch:     environment.Branch,
-		Path:       environment.Path,
-		Ports:      portMappings,
-		Containers: containers,
-		Running:    running,
-		Total:      total,
-	})
+	writeJSON(w, http.StatusOK, envResp)
 }
 
 func (s *Server) getEnvironmentDetails(composeDir, dockerProject string) ([]PortMapping, []ContainerInfo, int, int) {
@@ -281,19 +297,26 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	composeDir := wt.Path
-	if project.ComposeDir != "" {
-		composeDir = filepath.Join(wt.Path, project.ComposeDir)
-	}
-
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
-	if err != nil {
+	dataDir := filepath.Join(project.RootPath, ".piko", "data", req.Name)
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 
-	dockerProject := fmt.Sprintf("piko-%s-%s", project.Name, req.Name)
+	composeDir := wt.Path
+	if project.ComposeDir != "" {
+		composeDir = filepath.Join(wt.Path, project.ComposeDir)
+	}
+
+	_, composeErr := docker.DetectComposeFile(composeDir)
+	isSimpleMode := composeErr != nil
+
+	dockerProject := ""
+	if !isSimpleMode {
+		dockerProject = fmt.Sprintf("piko-%s-%s", project.Name, req.Name)
+	}
+
 	environment := &state.Environment{
 		ProjectID:     project.ID,
 		Name:          req.Name,
@@ -303,11 +326,37 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	}
 	envID, err := s.db.InsertEnvironment(environment)
 	if err != nil {
+		os.RemoveAll(dataDir)
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
 	}
 	environment.ID = envID
+
+	if isSimpleMode {
+		writeJSON(w, http.StatusOK, SuccessResponse{
+			Success: true,
+			Environment: &EnvironmentResponse{
+				Name:    environment.Name,
+				Status:  "simple",
+				Branch:  environment.Branch,
+				Path:    environment.Path,
+				Mode:    "simple",
+				DataDir: dataDir,
+				EnvID:   envID,
+			},
+		})
+		return
+	}
+
+	composeConfig, err := docker.ParseComposeConfig(composeDir)
+	if err != nil {
+		s.db.DeleteEnvironment(project.ID, req.Name)
+		os.RemoveAll(dataDir)
+		git.RemoveWorktree(wt.Path)
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
 
 	servicePorts := composeConfig.GetServicePorts()
 	allocations := ports.Allocate(envID, servicePorts)
@@ -317,6 +366,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 	pikoComposePath := filepath.Join(composeDir, "docker-compose.piko.yml")
 	if err := docker.WriteProjectFile(pikoComposePath, composeProject); err != nil {
 		s.db.DeleteEnvironment(project.ID, req.Name)
+		os.RemoveAll(dataDir)
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
 		return
@@ -330,6 +380,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 
 	if err := composeCmd.Run(); err != nil {
 		s.db.DeleteEnvironment(project.ID, req.Name)
+		os.RemoveAll(dataDir)
 		git.RemoveWorktree(wt.Path)
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: "failed to start containers"})
 		return
@@ -402,6 +453,11 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if environment.DockerProject == "" {
+		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+		return
+	}
+
 	composeDir := environment.Path
 	if project.ComposeDir != "" {
 		composeDir = filepath.Join(environment.Path, project.ComposeDir)
@@ -447,6 +503,11 @@ func (s *Server) handleDown(w http.ResponseWriter, r *http.Request) {
 	environment, err := s.db.GetEnvironmentByName(project.ID, name)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
+		return
+	}
+
+	if environment.DockerProject == "" {
+		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 		return
 	}
 

@@ -51,11 +51,16 @@ func runList(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(w, "NAME\tSTATUS\tBRANCH\tCREATED")
 
 	for _, e := range environments {
-		composeDir := e.Path
-		if ctx.Project.ComposeDir != "" {
-			composeDir = filepath.Join(e.Path, ctx.Project.ComposeDir)
+		var status string
+		if e.DockerProject == "" {
+			status = "simple"
+		} else {
+			composeDir := e.Path
+			if ctx.Project.ComposeDir != "" {
+				composeDir = filepath.Join(e.Path, ctx.Project.ComposeDir)
+			}
+			status = string(docker.GetProjectStatus(composeDir, e.DockerProject))
 		}
-		status := docker.GetProjectStatus(composeDir, e.DockerProject)
 		age := formatAge(e.CreatedAt)
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", e.Name, status, e.Branch, age)
 	}
@@ -96,11 +101,16 @@ func runListAll() error {
 		}
 
 		for _, e := range environments {
-			composeDir := e.Path
-			if p.ComposeDir != "" {
-				composeDir = filepath.Join(e.Path, p.ComposeDir)
+			var status string
+			if e.DockerProject == "" {
+				status = "simple"
+			} else {
+				composeDir := e.Path
+				if p.ComposeDir != "" {
+					composeDir = filepath.Join(e.Path, p.ComposeDir)
+				}
+				status = string(docker.GetProjectStatus(composeDir, e.DockerProject))
 			}
-			status := docker.GetProjectStatus(composeDir, e.DockerProject)
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.Name, e.Name, status, e.Branch)
 		}
 	}
