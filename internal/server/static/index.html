@@ -881,6 +881,21 @@
             panel.classList.toggle('hidden');
         }
 
+        function renderNotificationActions(n) {
+            if (n.notification_type === 'permission_prompt') {
+                return `
+                    <button class="btn btn-small" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+                    <button class="btn btn-small btn-secondary" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+                `;
+            }
+            return `
+                <input type="text" class="notification-input" placeholder="Type response..."
+                    onkeypress="handleNotificationKeypress(event, '${n.id}')">
+                <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
+                <button class="btn btn-small btn-secondary" onclick="dismissNotification('${n.id}')">Dismiss</button>
+            `;
+        }
+
         function renderNotifications() {
             const list = document.getElementById('notification-list');
 
@@ -890,17 +905,14 @@
             }
 
             list.innerHTML = Array.from(notifications.values()).map(n => `
-                <div class="notification-item" data-id="${n.id}">
+                <div class="notification-item" data-id="${n.id}" data-type="${n.notification_type}">
                     <div class="notification-header">
                         <span class="notification-env">${n.project_name}/${n.env_name}</span>
                         <span class="notification-type">${n.notification_type}</span>
                     </div>
                     <div class="notification-message">${escapeHtml(n.message)}</div>
                     <div class="notification-actions">
-                        <input type="text" class="notification-input" placeholder="Type response..."
-                            onkeypress="handleNotificationKeypress(event, '${n.id}')">
-                        <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
-                        <button class="btn btn-small btn-secondary" onclick="dismissNotification('${n.id}')">Dismiss</button>
+                        ${renderNotificationActions(n)}
                     </div>
                 </div>
             `).join('');
@@ -971,6 +983,42 @@
                     btn.textContent = 'Send';
                 }
                 input.disabled = false;
+            } finally {
+                sendingNotifications.delete(id);
+            }
+        }
+
+        async function sendKeyResponse(id, keys) {
+            if (sendingNotifications.has(id)) {
+                return;
+            }
+
+            const item = document.querySelector(`.notification-item[data-id="${id}"]`);
+            if (!item) return;
+
+            sendingNotifications.add(id);
+            const buttons = item.querySelectorAll('.btn');
+            buttons.forEach(b => b.disabled = true);
+
+            try {
+                const res = await fetch('/api/orchestra/respond', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notification_id: id, response: keys, response_type: 'keys' })
+                });
+
+                if (res.ok) {
+                    notifications.delete(id);
+                    updateNotificationBadge();
+                    renderNotifications();
+                } else {
+                    const data = await res.json();
+                    showError(data.error || 'Failed to send response');
+                    buttons.forEach(b => b.disabled = false);
+                }
+            } catch (err) {
+                showError('Failed to send response');
+                buttons.forEach(b => b.disabled = false);
             } finally {
                 sendingNotifications.delete(id);
             }

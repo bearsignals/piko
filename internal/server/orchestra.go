@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -51,6 +52,7 @@ type NotifyRequest struct {
 type RespondRequest struct {
 	NotificationID string `json:"notification_id"`
 	Response       string `json:"response"`
+	ResponseType   string `json:"response_type"`
 }
 
 type Hub struct {
@@ -106,13 +108,21 @@ func (h *Hub) AddNotification(n *CCNotification) {
 	h.notifications[n.ID] = n
 	h.mu.Unlock()
 
-	payload, _ := json.Marshal(n)
+	payload, err := json.Marshal(n)
+	if err != nil {
+		log.Printf("failed to marshal notification payload: %v", err)
+		return
+	}
 	msg := OrchestraMessage{
 		Type:      "notification",
 		Payload:   payload,
 		Timestamp: time.Now(),
 	}
-	data, _ := json.Marshal(msg)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("failed to marshal notification message: %v", err)
+		return
+	}
 	h.broadcast <- data
 }
 
@@ -125,13 +135,21 @@ func (h *Hub) RemoveNotification(id string) *CCNotification {
 	h.mu.Unlock()
 
 	if exists {
-		payload, _ := json.Marshal(map[string]string{"id": id})
+		payload, err := json.Marshal(map[string]string{"id": id})
+		if err != nil {
+			log.Printf("failed to marshal dismiss payload: %v", err)
+			return n
+		}
 		msg := OrchestraMessage{
 			Type:      "notification_dismissed",
 			Payload:   payload,
 			Timestamp: time.Now(),
 		}
-		data, _ := json.Marshal(msg)
+		data, err := json.Marshal(msg)
+		if err != nil {
+			log.Printf("failed to marshal dismiss message: %v", err)
+			return n
+		}
 		h.broadcast <- data
 	}
 
@@ -219,13 +237,21 @@ func (s *Server) handleOrchestraWS(w http.ResponseWriter, r *http.Request) {
 
 	existing := s.hub.ListNotifications()
 	for _, n := range existing {
-		payload, _ := json.Marshal(n)
+		payload, err := json.Marshal(n)
+		if err != nil {
+			log.Printf("failed to marshal existing notification payload: %v", err)
+			continue
+		}
 		msg := OrchestraMessage{
 			Type:      "notification",
 			Payload:   payload,
 			Timestamp: time.Now(),
 		}
-		data, _ := json.Marshal(msg)
+		data, err := json.Marshal(msg)
+		if err != nil {
+			log.Printf("failed to marshal existing notification message: %v", err)
+			continue
+		}
 		client.send <- data
 	}
 
@@ -275,7 +301,14 @@ func (s *Server) handleOrchestraRespond(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := tmux.SendKeysToSession(notification.TmuxTarget, req.Response); err != nil {
+	var err error
+	if req.ResponseType == "keys" {
+		err = tmux.SendKeys(notification.TmuxTarget, req.Response)
+	} else if req.Response != "" {
+		err = tmux.SendText(notification.TmuxTarget, req.Response)
+	}
+
+	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, SuccessResponse{
 			Success: false,
 			Error:   fmt.Sprintf("failed to send response to tmux: %v", err),
