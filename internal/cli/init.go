@@ -13,9 +13,10 @@ import (
 )
 
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize a project for piko",
-	RunE:  runInit,
+	Use:         "init",
+	Short:       "Initialize a project for piko",
+	RunE:        runInit,
+	Annotations: Requires(ToolGit),
 }
 
 var initComposeDir string

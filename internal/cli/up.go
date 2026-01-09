@@ -6,10 +6,11 @@ import (
 )
 
 var upCmd = &cobra.Command{
-	Use:   "up <name>",
-	Short: "Start containers for an environment",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runUp,
+	Use:         "up <name>",
+	Short:       "Start containers for an environment",
+	Args:        cobra.ExactArgs(1),
+	RunE:        runUp,
+	Annotations: Requires(ToolDocker),
 }
 
 func init() {

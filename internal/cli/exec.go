@@ -11,17 +11,19 @@ import (
 )
 
 var execCmd = &cobra.Command{
-	Use:   "exec <name> <service> [cmd...]",
-	Short: "Execute command in a container",
-	Args:  cobra.MinimumNArgs(2),
-	RunE:  runExec,
+	Use:         "exec <name> <service> [cmd...]",
+	Short:       "Execute command in a container",
+	Args:        cobra.MinimumNArgs(2),
+	RunE:        runExec,
+	Annotations: Requires(ToolDocker),
 }
 
 var shellCmd = &cobra.Command{
-	Use:   "shell <name> <service>",
-	Short: "Open interactive shell in a container",
-	Args:  cobra.ExactArgs(2),
-	RunE:  runShell,
+	Use:         "shell <name> <service>",
+	Short:       "Open interactive shell in a container",
+	Args:        cobra.ExactArgs(2),
+	RunE:        runShell,
+	Annotations: Requires(ToolDocker),
 }
 
 func init() {
