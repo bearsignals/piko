@@ -22,6 +22,7 @@ func init() {
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	ctx, err := NewContext()
 	if err != nil {
 		return err

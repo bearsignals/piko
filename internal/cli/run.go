@@ -25,6 +25,7 @@ func init() {
 }
 
 func runRun(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 
 	resolved, err := RequireDocker(name)

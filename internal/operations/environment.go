@@ -49,6 +49,19 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 		cfg = &config.Config{}
 	}
 
+	projectComposeDir := opts.Project.RootPath
+	if opts.Project.ComposeDir != "" {
+		projectComposeDir = filepath.Join(opts.Project.RootPath, opts.Project.ComposeDir)
+	}
+	_, composeDetectErr := docker.DetectComposeFile(projectComposeDir)
+	needsDocker := composeDetectErr == nil
+
+	if needsDocker {
+		if err := docker.CheckDockerAvailable(); err != nil {
+			return nil, err
+		}
+	}
+
 	worktreesDir := opts.Project.WorktreesDir()
 	if err := os.MkdirAll(worktreesDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create worktrees directory: %w", err)
@@ -314,6 +327,10 @@ func UpEnvironment(opts UpEnvironmentOptions) error {
 		log.Info("Simple mode environment - no containers to start")
 		log.Info("Use 'piko env attach' to access the tmux session")
 		return nil
+	}
+
+	if err := docker.CheckDockerAvailable(); err != nil {
+		return err
 	}
 
 	composeDir := opts.Environment.Path

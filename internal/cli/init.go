@@ -26,6 +26,7 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)

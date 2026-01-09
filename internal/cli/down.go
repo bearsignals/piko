@@ -17,6 +17,7 @@ func init() {
 }
 
 func runDown(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 
 	resolved, err := ResolveEnvironment(name)

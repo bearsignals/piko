@@ -4,11 +4,28 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/types"
 )
+
+func CheckDockerAvailable() error {
+	cmd := exec.Command("docker", "info")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		outputStr := strings.ToLower(string(output))
+		if strings.Contains(outputStr, "cannot connect") ||
+			strings.Contains(outputStr, "is the docker daemon running") ||
+			strings.Contains(outputStr, "connection refused") {
+			return fmt.Errorf("docker daemon isn't running, please (re)start it.")
+		}
+		return fmt.Errorf("docker unavailable: %s", strings.TrimSpace(string(output)))
+	}
+	return nil
+}
 
 var composeFilenames = []string{
 	"docker-compose.yml",

@@ -24,6 +24,7 @@ func init() {
 }
 
 func runList(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	if listAll {
 		return runListAll()
 	}

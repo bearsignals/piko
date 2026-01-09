@@ -22,6 +22,7 @@ func init() {
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	db, err := state.OpenCentral()
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)

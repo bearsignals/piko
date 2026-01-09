@@ -26,6 +26,7 @@ func init() {
 }
 
 func runLogs(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 	var serviceName string
 	if len(args) > 1 {
