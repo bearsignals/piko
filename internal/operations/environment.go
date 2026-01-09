@@ -86,7 +86,9 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 	log.Infof("Created data directory at %s", dataDir)
 
 	cleanup := func() {
+		log.Infof("Removing data directory %s", dataDir)
 		os.RemoveAll(dataDir)
+		log.Infof("Removing worktree %s", wt.Path)
 		git.RemoveWorktree(wt.Path)
 	}
 
@@ -119,6 +121,7 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 	environment.ID = envID
 
 	cleanupWithDB := func() {
+		log.Info("Removing environment from database")
 		opts.DB.DeleteEnvironment(opts.Project.ID, opts.Name)
 		cleanup()
 	}
