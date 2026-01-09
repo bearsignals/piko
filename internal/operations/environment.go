@@ -254,15 +254,6 @@ func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
 		}
 	}
 
-	sessionName := tmux.SessionName(opts.Project.Name, opts.Environment.Name)
-	if tmux.SessionExists(sessionName) {
-		if err := tmux.KillSession(sessionName); err != nil {
-			log.Warnf("failed to kill tmux session: %v", err)
-		} else {
-			log.Info("Killed tmux session")
-		}
-	}
-
 	isSimpleMode := opts.Environment.DockerProject == ""
 
 	if !isSimpleMode {
@@ -306,6 +297,15 @@ func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
 		return fmt.Errorf("failed to remove from database: %w", err)
 	}
 	log.Info("Removed from database")
+
+	sessionName := tmux.SessionName(opts.Project.Name, opts.Environment.Name)
+	if tmux.SessionExists(sessionName) {
+		if err := tmux.KillSession(sessionName); err != nil {
+			log.Warnf("failed to kill tmux session: %v", err)
+		} else {
+			log.Info("Killed tmux session")
+		}
+	}
 
 	return nil
 }
