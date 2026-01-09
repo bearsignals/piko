@@ -40,10 +40,6 @@
         align-items: center;
         gap: 1rem;
       }
-      .last-updated {
-        font-size: 0.75rem;
-        color: #666;
-      }
       .refresh-btn {
         background: none;
         border: 1px solid #333;
@@ -456,7 +452,6 @@
         ></span>
       </div>
       <div class="header-right">
-        <span class="last-updated" id="last-updated"></span>
         <button class="refresh-btn" onclick="refresh()" title="Refresh">
           &#8635;
         </button>
@@ -512,7 +507,6 @@
     </div>
 
     <script>
-            let lastUpdated = null;
             let projectsData = [];
             let notifications = new Map();
             let cachedResults = [];
@@ -540,23 +534,8 @@
 
                 cachedResults = await Promise.all(envPromises);
                 renderProjects(cachedResults);
-                lastUpdated = new Date();
-                updateLastUpdated();
               } catch (err) {
                 showError("Failed to load projects");
-              }
-            }
-
-            function updateLastUpdated() {
-              if (!lastUpdated) return;
-              const el = document.getElementById("last-updated");
-              const seconds = Math.floor((new Date() - lastUpdated) / 1000);
-              if (seconds < 5) {
-                el.textContent = "Updated just now";
-              } else if (seconds < 60) {
-                el.textContent = `Updated ${seconds}s ago`;
-              } else {
-                el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
               }
             }
 
@@ -1028,7 +1007,6 @@
 
             connectWebSocket();
             loadProjects();
-            setInterval(updateLastUpdated, 1000);
     </script>
   </body>
 </html>
