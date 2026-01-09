@@ -1,616 +1,651 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>piko</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #0f0f0f;
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            border-bottom: 1px solid #2a2a2a;
-            background: #1a1a1a;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .logo {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #fff;
-        }
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .last-updated {
-            font-size: 0.75rem;
-            color: #666;
-        }
-        .refresh-btn {
-            background: none;
-            border: 1px solid #333;
-            color: #888;
-            padding: 0.3rem 0.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.2s;
-        }
-        .refresh-btn:hover {
-            border-color: #555;
-            color: #fff;
-        }
-        .refresh-btn.spinning {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        main {
-            padding: 1.5rem;
-            overflow-x: auto;
-        }
-        .projects-grid {
-            display: flex;
-            gap: 1rem;
-            align-items: flex-start;
-            min-height: calc(100vh - 100px);
-        }
-        .project-column {
-            flex: 0 0 280px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            max-height: calc(100vh - 100px);
-        }
-        .project-header {
-            padding: 0.75rem;
-            border-bottom: 1px solid #2a2a2a;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .project-title {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #fff;
-        }
-        .project-meta {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .project-count {
-            font-size: 0.7rem;
-            color: #888;
-        }
-        .btn {
-            background: #2563eb;
-            color: #fff;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: background 0.2s;
-        }
-        .btn:hover {
-            background: #1d4ed8;
-        }
-        .btn:disabled {
-            background: #444;
-            cursor: not-allowed;
-        }
-        .btn-secondary {
-            background: #333;
-        }
-        .btn-secondary:hover {
-            background: #444;
-        }
-        .btn-small {
-            padding: 0.3rem 0.6rem;
-            font-size: 0.75rem;
-        }
-        .env-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .env-card-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
-        .env-card {
-            background: #252525;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 0.6rem;
-            display: flex;
-            flex-direction: column;
-        }
-        .env-card.has-notification {
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
-            border-bottom: none;
-        }
-        .env-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 0.4rem;
-        }
-        .env-name {
-            font-weight: 500;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .status-dot.running {
-            background: #22c55e;
-        }
-        .status-dot.stopped {
-            background: #666;
-        }
-        .status-dot.unknown {
-            background: #f59e0b;
-        }
-        .status-dot.simple {
-            background: #8b5cf6;
-        }
-        .env-branch {
-            color: #666;
-            font-size: 0.7rem;
-            margin-bottom: 0.5rem;
-        }
-        .env-actions {
-            display: flex;
-            gap: 0.4rem;
-            margin-top: auto;
-            flex-wrap: wrap;
-        }
-        .status-text {
-            font-size: 0.7rem;
-            color: #888;
-        }
-        .status-text.healthy {
-            color: #22c55e;
-        }
-        .status-text.partial {
-            color: #f59e0b;
-        }
-        .ports-section {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid #2a2a2a;
-            flex: 1;
-        }
-        .ports-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        .port-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.7rem;
-            font-family: monospace;
-        }
-        .port-service {
-            color: #888;
-            min-width: 50px;
-        }
-        .port-url {
-            color: #60a5fa;
-            text-decoration: none;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .port-url:hover {
-            text-decoration: underline;
-        }
-        .port-address {
-            color: #aaa;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .copy-btn {
-            background: none;
-            border: none;
-            color: #666;
-            cursor: pointer;
-            padding: 0.1rem;
-            font-size: 0.65rem;
-            transition: color 0.2s;
-            flex-shrink: 0;
-        }
-        .copy-btn:hover {
-            color: #fff;
-        }
-        .copy-btn.copied {
-            color: #22c55e;
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-        .modal {
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 1.5rem;
-            width: 400px;
-            max-width: 90%;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        .modal-title {
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            font-size: 1.5rem;
-            line-height: 1;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            color: #aaa;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 0.6rem;
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #0f0f0f;
-            color: #fff;
-            font-size: 0.95rem;
-        }
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #2563eb;
-        }
-        .form-hint {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 0.25rem;
-        }
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-        .error {
-            background: #7f1d1d;
-            border: 1px solid #991b1b;
-            color: #fca5a5;
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #666;
-        }
-        .hidden {
-            display: none !important;
-        }
-        .loading {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        .no-envs {
-            color: #666;
-            font-size: 0.8rem;
-            padding: 1rem;
-            text-align: center;
-        }
-        .ws-status {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #666;
-        }
-        .ws-status.connected {
-            background: #22c55e;
-        }
-        .ws-status.disconnected {
-            background: #ef4444;
-        }
-        .env-notification {
-            background: #1e1b4b;
-            border: 1px solid #3730a3;
-            border-top: none;
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-            padding: 0.6rem;
-            animation: slideDown 0.2s ease-out;
-        }
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .notification-label {
-            font-size: 0.65rem;
-            color: #818cf8;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.3rem;
-        }
-        .notification-message {
-            font-size: 0.75rem;
-            color: #c7d2fe;
-            margin-bottom: 0.5rem;
-            white-space: pre-wrap;
-            word-break: break-word;
-            max-height: 60px;
-            overflow-y: auto;
-        }
-        .notification-actions {
-            display: flex;
-            gap: 0.4rem;
-            align-items: center;
-        }
-        .notification-input {
-            flex: 1;
-            padding: 0.35rem 0.5rem;
-            border: 1px solid #3730a3;
-            border-radius: 4px;
-            background: #0f0f0f;
-            color: #fff;
-            font-size: 0.75rem;
-        }
-        .notification-input:focus {
-            outline: none;
-            border-color: #6366f1;
-        }
-        .btn-allow {
-            background: #22c55e;
-        }
-        .btn-allow:hover {
-            background: #16a34a;
-        }
-        .btn-deny {
-            background: #ef4444;
-        }
-        .btn-deny:hover {
-            background: #dc2626;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #0f0f0f;
+        color: #e0e0e0;
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid #2a2a2a;
+        background: #1a1a1a;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .logo {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+      }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .last-updated {
+        font-size: 0.75rem;
+        color: #666;
+      }
+      .refresh-btn {
+        background: none;
+        border: 1px solid #333;
+        color: #888;
+        padding: 0.3rem 0.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+      }
+      .refresh-btn:hover {
+        border-color: #555;
+        color: #fff;
+      }
+      .refresh-btn.spinning {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      main {
+        padding: 1.5rem;
+        overflow-x: auto;
+      }
+      .projects-grid {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        min-height: calc(100vh - 100px);
+      }
+      .project-column {
+        flex: 0 0 300px;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 100px);
+      }
+      .project-header {
+        padding: 0.75rem;
+        border-bottom: 1px solid #2a2a2a;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .project-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #fff;
+      }
+      .project-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .project-count {
+        font-size: 0.7rem;
+        color: #888;
+      }
+      .btn {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #1d4ed8;
+      }
+      .btn:disabled {
+        background: #444;
+        cursor: not-allowed;
+      }
+      .btn-secondary {
+        background: #333;
+      }
+      .btn-secondary:hover {
+        background: #444;
+      }
+      .btn-small {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+      }
+      .env-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .env-card-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .env-card {
+        background: #252525;
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 0.6rem;
+        display: flex;
+        flex-direction: column;
+      }
+      .env-card.has-notification {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom: none;
+      }
+      .env-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.4rem;
+      }
+      .env-header-actions {
+        display: flex;
+        gap: 0.3rem;
+      }
+      .env-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .status-dot.running {
+        background: #22c55e;
+      }
+      .status-dot.stopped {
+        background: #666;
+      }
+      .status-dot.unknown {
+        background: #f59e0b;
+      }
+      .status-dot.simple {
+        background: #8b5cf6;
+      }
+      .env-branch {
+        color: #666;
+        font-size: 0.7rem;
+        margin-bottom: 0.5rem;
+      }
+      .status-text {
+        font-size: 0.7rem;
+        color: #888;
+      }
+      .status-text.healthy {
+        color: #22c55e;
+      }
+      .status-text.partial {
+        color: #f59e0b;
+      }
+      .ports-section {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid #2a2a2a;
+        flex: 1;
+      }
+      .ports-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .port-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.7rem;
+        font-family: monospace;
+      }
+      .port-service {
+        color: #888;
+        min-width: 50px;
+      }
+      .port-url {
+        color: #60a5fa;
+        text-decoration: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .port-url:hover {
+        text-decoration: underline;
+      }
+      .port-address {
+        color: #aaa;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .copy-btn {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 0.1rem;
+        font-size: 0.65rem;
+        transition: color 0.2s;
+        flex-shrink: 0;
+      }
+      .copy-btn:hover {
+        color: #fff;
+      }
+      .copy-btn.copied {
+        color: #22c55e;
+      }
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .modal {
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 12px;
+        padding: 1.5rem;
+        width: 400px;
+        max-width: 90%;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .modal-title {
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        font-size: 1.5rem;
+        line-height: 1;
+      }
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: #aaa;
+      }
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: #0f0f0f;
+        color: #fff;
+        font-size: 0.95rem;
+      }
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #2563eb;
+      }
+      .form-hint {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 0.25rem;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+      .error {
+        background: #7f1d1d;
+        border: 1px solid #991b1b;
+        color: #fca5a5;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .loading {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .no-envs {
+        color: #666;
+        font-size: 0.8rem;
+        padding: 1rem;
+        text-align: center;
+      }
+      .ws-status {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #666;
+      }
+      .ws-status.connected {
+        background: #22c55e;
+      }
+      .ws-status.disconnected {
+        background: #ef4444;
+      }
+      .env-notification {
+        background: #1e1b4b;
+        border: 1px solid #3730a3;
+        border-top: none;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        padding: 0.6rem;
+        animation: slideDown 0.2s ease-out;
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .notification-label {
+        font-size: 0.65rem;
+        color: #818cf8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.3rem;
+      }
+      .notification-message {
+        font-size: 0.75rem;
+        color: #c7d2fe;
+        margin-bottom: 0.5rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 60px;
+        overflow-y: auto;
+      }
+      .notification-actions {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+      }
+      .notification-input {
+        flex: 1;
+        padding: 0.35rem 0.5rem;
+        border: 1px solid #3730a3;
+        border-radius: 4px;
+        background: #0f0f0f;
+        color: #fff;
+        font-size: 0.75rem;
+      }
+      .notification-input:focus {
+        outline: none;
+        border-color: #6366f1;
+      }
+      .btn-allow {
+        background: #22c55e;
+      }
+      .btn-allow:hover {
+        background: #16a34a;
+      }
+      .btn-deny {
+        background: #ef4444;
+      }
+      .btn-deny:hover {
+        background: #dc2626;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <header>
-        <div class="header-left">
-            <span class="logo">piko</span>
-            <span class="ws-status" id="ws-status" title="WebSocket disconnected"></span>
-        </div>
-        <div class="header-right">
-            <span class="last-updated" id="last-updated"></span>
-            <button class="refresh-btn" onclick="refresh()" title="Refresh">&#8635;</button>
-        </div>
+      <div class="header-left">
+        <span class="logo">piko</span>
+        <span
+          class="ws-status"
+          id="ws-status"
+          title="WebSocket disconnected"
+        ></span>
+      </div>
+      <div class="header-right">
+        <span class="last-updated" id="last-updated"></span>
+        <button class="refresh-btn" onclick="refresh()" title="Refresh">
+          &#8635;
+        </button>
+      </div>
     </header>
     <main>
-        <div id="error" class="error hidden"></div>
-        <div id="projects-container"></div>
-        <div id="empty-state" class="empty-state hidden">
-            <p>No projects registered yet.</p>
-            <p>Run <code>piko init</code> in a project directory to get started.</p>
-        </div>
+      <div id="error" class="error hidden"></div>
+      <div id="projects-container"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <p>No projects registered yet.</p>
+        <p>Run <code>piko init</code> in a project directory to get started.</p>
+      </div>
     </main>
 
     <div id="create-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <span class="modal-title">Create New Environment</span>
-                <button class="modal-close" onclick="hideCreateModal()">&times;</button>
-            </div>
-            <form id="create-form" onsubmit="createEnvironment(event)">
-                <input type="hidden" id="create-project-id">
-                <div class="form-group">
-                    <label for="env-name">Name</label>
-                    <input type="text" id="env-name" required placeholder="feature-xyz">
-                </div>
-                <div class="form-group">
-                    <label for="env-branch">Branch (optional)</label>
-                    <input type="text" id="env-branch" placeholder="defaults to name">
-                    <div class="form-hint">Leave empty to create a new branch with the same name</div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="hideCreateModal()">Cancel</button>
-                    <button type="submit" class="btn" id="create-btn">Create</button>
-                </div>
-            </form>
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Create New Environment</span>
+          <button class="modal-close" onclick="hideCreateModal()">
+            &times;
+          </button>
         </div>
+        <form id="create-form" onsubmit="createEnvironment(event)">
+          <input type="hidden" id="create-project-id" />
+          <div class="form-group">
+            <label for="env-name">Name</label>
+            <input
+              type="text"
+              id="env-name"
+              required
+              placeholder="feature-xyz"
+            />
+          </div>
+          <div class="form-group">
+            <label for="env-branch">Branch (optional)</label>
+            <input type="text" id="env-branch" placeholder="defaults to name" />
+            <div class="form-hint">
+              Leave empty to create a new branch with the same name
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="hideCreateModal()"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn" id="create-btn">Create</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <script>
-        let lastUpdated = null;
-        let projectsData = [];
-        let notifications = new Map();
-        let cachedResults = [];
+      let lastUpdated = null;
+      let projectsData = [];
+      let notifications = new Map();
+      let cachedResults = [];
 
-        async function loadProjects() {
-            try {
-                const res = await fetch('/api/projects');
-                projectsData = await res.json();
+      async function loadProjects() {
+        try {
+          const res = await fetch("/api/projects");
+          projectsData = await res.json();
 
-                if (projectsData.length === 0) {
-                    document.getElementById('projects-container').innerHTML = '';
-                    document.getElementById('empty-state').classList.remove('hidden');
-                    return;
-                }
+          if (projectsData.length === 0) {
+            document.getElementById("projects-container").innerHTML = "";
+            document.getElementById("empty-state").classList.remove("hidden");
+            return;
+          }
 
-                document.getElementById('empty-state').classList.add('hidden');
+          document.getElementById("empty-state").classList.add("hidden");
 
-                const envPromises = projectsData.map(async (project) => {
-                    const envRes = await fetch(`/api/projects/${project.id}/environments`);
-                    const environments = await envRes.json();
-                    return { project, environments };
-                });
+          const envPromises = projectsData.map(async (project) => {
+            const envRes = await fetch(
+              `/api/projects/${project.id}/environments`
+            );
+            const environments = await envRes.json();
+            return { project, environments };
+          });
 
-                cachedResults = await Promise.all(envPromises);
-                renderProjects(cachedResults);
-                lastUpdated = new Date();
-                updateLastUpdated();
-            } catch (err) {
-                showError('Failed to load projects');
-            }
+          cachedResults = await Promise.all(envPromises);
+          renderProjects(cachedResults);
+          lastUpdated = new Date();
+          updateLastUpdated();
+        } catch (err) {
+          showError("Failed to load projects");
         }
+      }
 
-        function updateLastUpdated() {
-            if (!lastUpdated) return;
-            const el = document.getElementById('last-updated');
-            const seconds = Math.floor((new Date() - lastUpdated) / 1000);
-            if (seconds < 5) {
-                el.textContent = 'Updated just now';
-            } else if (seconds < 60) {
-                el.textContent = `Updated ${seconds}s ago`;
-            } else {
-                el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
-            }
+      function updateLastUpdated() {
+        if (!lastUpdated) return;
+        const el = document.getElementById("last-updated");
+        const seconds = Math.floor((new Date() - lastUpdated) / 1000);
+        if (seconds < 5) {
+          el.textContent = "Updated just now";
+        } else if (seconds < 60) {
+          el.textContent = `Updated ${seconds}s ago`;
+        } else {
+          el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
         }
+      }
 
-        async function refresh() {
-            const btn = document.querySelector('.refresh-btn');
-            btn.classList.add('spinning');
-            await loadProjects();
-            setTimeout(() => btn.classList.remove('spinning'), 500);
+      async function refresh() {
+        const btn = document.querySelector(".refresh-btn");
+        btn.classList.add("spinning");
+        await loadProjects();
+        setTimeout(() => btn.classList.remove("spinning"), 500);
+      }
+
+      function getStatusText(env) {
+        if (env.mode === "simple") {
+          return { text: "simple", class: "" };
         }
-
-        function getStatusText(env) {
-            if (env.mode === 'simple') {
-                return { text: 'simple', class: '' };
-            }
-            if (env.total === 0) {
-                return { text: env.status, class: '' };
-            }
-            if (env.running === env.total) {
-                return { text: `${env.running}/${env.total}`, class: 'healthy' };
-            }
-            if (env.running === 0) {
-                return { text: 'stopped', class: '' };
-            }
-            return { text: `${env.running}/${env.total}`, class: 'partial' };
+        if (env.total === 0) {
+          return { text: env.status, class: "" };
         }
+        if (env.running === env.total) {
+          return { text: `${env.running}/${env.total}`, class: "healthy" };
+        }
+        if (env.running === 0) {
+          return { text: "stopped", class: "" };
+        }
+        return { text: `${env.running}/${env.total}`, class: "partial" };
+      }
 
-        function renderPorts(ports) {
-            if (!ports || ports.length === 0) return '';
+      function renderPorts(ports) {
+        if (!ports || ports.length === 0) return "";
 
-            const portItems = ports.slice(0, 3).map(p => {
-                const address = `localhost:${p.hostPort}`;
-                if (p.url) {
-                    return `
+        const portItems = ports
+          .map((p) => {
+            const address = `localhost:${p.hostPort}`;
+            if (p.url) {
+              return `
                         <div class="port-item">
                             <span class="port-service">${p.service}</span>
                             <a href="${p.url}" target="_blank" class="port-url">${p.url}</a>
                             <button class="copy-btn" onclick="copyToClipboard('${p.url}', this)" title="Copy">cp</button>
                         </div>
                     `;
-                }
-                return `
+            }
+            return `
                     <div class="port-item">
                         <span class="port-service">${p.service}</span>
                         <span class="port-address">${address}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${address}', this)" title="Copy">cp</button>
                     </div>
                 `;
-            }).join('');
+          })
+          .join("");
 
-            const moreText = ports.length > 3 ? `<div class="port-item" style="color: #666;">+${ports.length - 3} more</div>` : '';
-
-            return `
+        return `
                 <div class="ports-section">
-                    <div class="ports-list">${portItems}${moreText}</div>
+                    <div class="ports-list">${portItems}</div>
                 </div>
             `;
-        }
+      }
 
-        function renderProjects(results) {
-            const container = document.getElementById('projects-container');
+      function renderProjects(results) {
+        const container = document.getElementById("projects-container");
 
-            const columnsHtml = results.map(({ project, environments }) => {
-                const dockerEnvs = environments.filter(e => e.mode !== 'simple');
-                const runningCount = dockerEnvs.filter(e => e.status === 'running').length;
-                const simpleCount = environments.filter(e => e.mode === 'simple').length;
+        const columnsHtml = results
+          .map(({ project, environments }) => {
+            const dockerEnvs = environments.filter((e) => e.mode !== "simple");
+            const runningCount = dockerEnvs.filter(
+              (e) => e.status === "running"
+            ).length;
+            const simpleCount = environments.filter(
+              (e) => e.mode === "simple"
+            ).length;
 
-                let envsHtml;
-                if (environments.length === 0) {
-                    envsHtml = `<div class="no-envs">No environments</div>`;
-                } else {
-                    envsHtml = environments.map(env => renderEnvironment(project, env)).join('');
-                }
+            let envsHtml;
+            if (environments.length === 0) {
+              envsHtml = `<div class="no-envs">No environments</div>`;
+            } else {
+              envsHtml = environments
+                .map((env) => renderEnvironment(project, env))
+                .join("");
+            }
 
-                let countText = '';
-                if (dockerEnvs.length > 0) {
-                    countText = `${runningCount}/${dockerEnvs.length}`;
-                }
-                if (simpleCount > 0) {
-                    countText += countText ? ` + ${simpleCount}s` : `${simpleCount}s`;
-                }
+            let countText = "";
+            if (dockerEnvs.length > 0) {
+              countText = `${runningCount}/${dockerEnvs.length}`;
+            }
+            if (simpleCount > 0) {
+              countText += countText ? ` + ${simpleCount}s` : `${simpleCount}s`;
+            }
 
-                return `
+            return `
                     <div class="project-column">
                         <div class="project-header">
                             <span class="project-title">${project.name}</span>
@@ -622,14 +657,15 @@
                         <div class="env-list">${envsHtml}</div>
                     </div>
                 `;
-            }).join('');
+          })
+          .join("");
 
-            container.innerHTML = `<div class="projects-grid">${columnsHtml}</div>`;
-        }
+        container.innerHTML = `<div class="projects-grid">${columnsHtml}</div>`;
+      }
 
-        function renderSimpleInfo(env) {
-            if (env.mode !== 'simple') return '';
-            return `
+      function renderSimpleInfo(env) {
+        if (env.mode !== "simple") return "";
+        return `
                 <div class="ports-section">
                     <div class="ports-list">
                         <div class="port-item">
@@ -640,326 +676,362 @@
                     </div>
                 </div>
             `;
-        }
+      }
 
-        function getEnvNotifications(projectName, envName) {
-            const key = `${projectName}/${envName}`;
-            return Array.from(notifications.values()).filter(n =>
-                `${n.project_name}/${n.env_name}` === key
-            );
-        }
+      function getEnvNotifications(projectName, envName) {
+        const key = `${projectName}/${envName}`;
+        return Array.from(notifications.values()).filter(
+          (n) => `${n.project_name}/${n.env_name}` === key
+        );
+      }
 
-        function renderNotification(n) {
-            let actions = '';
-            if (n.notification_type === 'permission_prompt') {
-                actions = `
+      function renderNotification(n) {
+        let actions = "";
+        if (n.notification_type === "permission_prompt") {
+          actions = `
                     <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
                     <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
                 `;
-            } else {
-                actions = `
+        } else {
+          actions = `
                     <input type="text" class="notification-input" placeholder="Response..."
                         onkeypress="handleNotificationKeypress(event, '${n.id}')" data-notification-id="${n.id}">
                     <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
                 `;
-            }
+        }
 
-            return `
+        return `
                 <div class="env-notification" data-notification-id="${n.id}">
                     <div class="notification-label">${n.notification_type}</div>
-                    <div class="notification-message">${escapeHtml(n.message)}</div>
+                    <div class="notification-message">${escapeHtml(
+                      n.message
+                    )}</div>
                     <div class="notification-actions">${actions}</div>
                 </div>
             `;
-        }
+      }
 
-        function renderEnvironment(project, env) {
-            const statusInfo = getStatusText(env);
-            const isSimple = env.mode === 'simple';
-            const envNotifications = getEnvNotifications(project.name, env.name);
-            const hasNotification = envNotifications.length > 0;
-            const showBranch = env.branch !== env.name;
+      function renderEnvironment(project, env) {
+        const statusInfo = getStatusText(env);
+        const isSimple = env.mode === "simple";
+        const envNotifications = getEnvNotifications(project.name, env.name);
+        const hasNotification = envNotifications.length > 0;
+        const showBranch = env.branch !== env.name;
 
-            const notificationsHtml = envNotifications.map(n => renderNotification(n)).join('');
+        const notificationsHtml = envNotifications
+          .map((n) => renderNotification(n))
+          .join("");
 
-            return `
+        const actionButtons = isSimple
+          ? `<button class="btn btn-small btn-secondary" onclick="openInEditor(${project.id}, '${env.name}')">Edit</button>`
+          : `<div class="env-header-actions">
+                    <button class="btn btn-small btn-secondary" onclick="openInEditor(${
+                      project.id
+                    }, '${env.name}')">Edit</button>
+                    ${
+                      env.status === "running"
+                        ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}')">Stop</button>`
+                        : `<button class="btn btn-small" onclick="startEnv(${project.id}, '${env.name}')">Start</button>`
+                    }
+                   </div>`;
+
+        return `
                 <div class="env-card-wrapper">
-                    <div class="env-card ${hasNotification ? 'has-notification' : ''}">
+                    <div class="env-card ${
+                      hasNotification ? "has-notification" : ""
+                    }">
                         <div class="env-header">
                             <div class="env-name">
                                 <span class="status-dot ${env.status}"></span>
                                 ${env.name}
-                            </div>
-                            <button class="btn btn-small btn-secondary" onclick="openInEditor(${project.id}, '${env.name}')">Edit</button>
-                        </div>
-                        ${showBranch ? `<div class="env-branch">${env.branch}</div>` : ''}
-                        ${isSimple ? '' : renderPorts(env.ports)}
-                        ${isSimple ? '' : `
-                            <div class="env-actions">
-                                ${env.status === 'running'
-                                    ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}')">Stop</button>`
-                                    : `<button class="btn btn-small" onclick="startEnv(${project.id}, '${env.name}')">Start</button>`
+                                ${
+                                  !isSimple
+                                    ? `<span class="status-text ${statusInfo.class}">${statusInfo.text}</span>`
+                                    : ""
                                 }
-                                <span class="status-text ${statusInfo.class}">${statusInfo.text}</span>
                             </div>
-                        `}
+                            ${actionButtons}
+                        </div>
+                        ${
+                          showBranch
+                            ? `<div class="env-branch">${env.branch}</div>`
+                            : ""
+                        }
+                        ${isSimple ? "" : renderPorts(env.ports)}
                     </div>
                     ${notificationsHtml}
                 </div>
             `;
+      }
+
+      async function copyToClipboard(text, btn) {
+        try {
+          await navigator.clipboard.writeText(text);
+          btn.classList.add("copied");
+          const orig = btn.textContent;
+          btn.textContent = "✓";
+          setTimeout(() => {
+            btn.classList.remove("copied");
+            btn.textContent = orig;
+          }, 1500);
+        } catch (err) {
+          showError("Failed to copy to clipboard");
+        }
+      }
+
+      function showCreateModal(projectId) {
+        document.getElementById("create-project-id").value = projectId;
+        document.getElementById("create-modal").classList.remove("hidden");
+        document.getElementById("env-name").focus();
+      }
+
+      function hideCreateModal() {
+        document.getElementById("create-modal").classList.add("hidden");
+        document.getElementById("create-form").reset();
+      }
+
+      async function createEnvironment(e) {
+        e.preventDefault();
+        const btn = document.getElementById("create-btn");
+        const projectId = document.getElementById("create-project-id").value;
+        const name = document.getElementById("env-name").value;
+        const branch = document.getElementById("env-branch").value;
+
+        btn.disabled = true;
+        btn.textContent = "Creating...";
+
+        try {
+          const res = await fetch(`/api/projects/${projectId}/environments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, branch: branch || "" }),
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            hideCreateModal();
+            loadProjects();
+          } else {
+            showError(data.error || "Failed to create environment");
+          }
+        } catch (err) {
+          showError("Failed to create environment");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Create";
+        }
+      }
+
+      async function openInEditor(projectId, name) {
+        try {
+          const res = await fetch(
+            `/api/projects/${projectId}/environments/${name}/open`,
+            { method: "POST" }
+          );
+          const data = await res.json();
+          if (!data.success) {
+            showError(data.error || "Failed to open editor");
+          }
+        } catch (err) {
+          showError("Failed to open editor");
+        }
+      }
+
+      async function startEnv(projectId, name) {
+        try {
+          const res = await fetch(
+            `/api/projects/${projectId}/environments/${name}/up`,
+            { method: "POST" }
+          );
+          const data = await res.json();
+          if (data.success) {
+            loadProjects();
+          } else {
+            showError(data.error || "Failed to start environment");
+          }
+        } catch (err) {
+          showError("Failed to start environment");
+        }
+      }
+
+      async function stopEnv(projectId, name) {
+        try {
+          const res = await fetch(
+            `/api/projects/${projectId}/environments/${name}/down`,
+            { method: "POST" }
+          );
+          const data = await res.json();
+          if (data.success) {
+            loadProjects();
+          } else {
+            showError(data.error || "Failed to stop environment");
+          }
+        } catch (err) {
+          showError("Failed to stop environment");
+        }
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("error");
+        el.textContent = msg;
+        el.classList.remove("hidden");
+        setTimeout(() => el.classList.add("hidden"), 5000);
+      }
+
+      let ws = null;
+      let wsReconnectTimeout = null;
+
+      function connectWebSocket() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/api/orchestra/ws`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          const status = document.getElementById("ws-status");
+          status.classList.add("connected");
+          status.classList.remove("disconnected");
+          status.title = "WebSocket connected";
+        };
+
+        ws.onclose = () => {
+          const status = document.getElementById("ws-status");
+          status.classList.remove("connected");
+          status.classList.add("disconnected");
+          status.title = "WebSocket disconnected";
+
+          wsReconnectTimeout = setTimeout(connectWebSocket, 3000);
+        };
+
+        ws.onerror = () => {
+          ws.close();
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            handleWebSocketMessage(msg);
+          } catch (err) {
+            console.error("Failed to parse WebSocket message:", err);
+          }
+        };
+      }
+
+      function handleWebSocketMessage(msg) {
+        if (msg.type === "notification") {
+          const notification = msg.payload;
+          notifications.set(notification.id, notification);
+          renderProjects(cachedResults);
+        } else if (msg.type === "notification_dismissed") {
+          const data = msg.payload;
+          notifications.delete(data.id);
+          renderProjects(cachedResults);
+        }
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function handleNotificationKeypress(event, id) {
+        if (event.key === "Enter") {
+          sendNotificationResponse(id);
+        }
+      }
+
+      const sendingNotifications = new Set();
+
+      async function sendNotificationResponse(id) {
+        if (sendingNotifications.has(id)) return;
+
+        const input = document.querySelector(
+          `input[data-notification-id="${id}"]`
+        );
+        if (!input) return;
+
+        const response = input.value.trim();
+        if (!response) {
+          input.focus();
+          return;
         }
 
-        async function copyToClipboard(text, btn) {
-            try {
-                await navigator.clipboard.writeText(text);
-                btn.classList.add('copied');
-                const orig = btn.textContent;
-                btn.textContent = '✓';
-                setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.textContent = orig;
-                }, 1500);
-            } catch (err) {
-                showError('Failed to copy to clipboard');
-            }
+        sendingNotifications.add(id);
+        input.disabled = true;
+
+        try {
+          const res = await fetch("/api/orchestra/respond", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notification_id: id, response }),
+          });
+
+          if (res.ok) {
+            notifications.delete(id);
+            renderProjects(cachedResults);
+          } else {
+            const data = await res.json();
+            showError(data.error || "Failed to send response");
+            input.disabled = false;
+          }
+        } catch (err) {
+          showError("Failed to send response");
+          input.disabled = false;
+        } finally {
+          sendingNotifications.delete(id);
+        }
+      }
+
+      async function sendKeyResponse(id, keys) {
+        if (sendingNotifications.has(id)) return;
+
+        sendingNotifications.add(id);
+        const notification = document.querySelector(
+          `.env-notification[data-notification-id="${id}"]`
+        );
+        if (notification) {
+          const buttons = notification.querySelectorAll(".btn");
+          buttons.forEach((b) => (b.disabled = true));
         }
 
-        function showCreateModal(projectId) {
-            document.getElementById('create-project-id').value = projectId;
-            document.getElementById('create-modal').classList.remove('hidden');
-            document.getElementById('env-name').focus();
-        }
+        try {
+          const res = await fetch("/api/orchestra/respond", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              notification_id: id,
+              response: keys,
+              response_type: "keys",
+            }),
+          });
 
-        function hideCreateModal() {
-            document.getElementById('create-modal').classList.add('hidden');
-            document.getElementById('create-form').reset();
-        }
-
-        async function createEnvironment(e) {
-            e.preventDefault();
-            const btn = document.getElementById('create-btn');
-            const projectId = document.getElementById('create-project-id').value;
-            const name = document.getElementById('env-name').value;
-            const branch = document.getElementById('env-branch').value;
-
-            btn.disabled = true;
-            btn.textContent = 'Creating...';
-
-            try {
-                const res = await fetch(`/api/projects/${projectId}/environments`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, branch: branch || '' })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    hideCreateModal();
-                    loadProjects();
-                } else {
-                    showError(data.error || 'Failed to create environment');
-                }
-            } catch (err) {
-                showError('Failed to create environment');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Create';
-            }
-        }
-
-        async function openInEditor(projectId, name) {
-            try {
-                const res = await fetch(`/api/projects/${projectId}/environments/${name}/open`, { method: 'POST' });
-                const data = await res.json();
-                if (!data.success) {
-                    showError(data.error || 'Failed to open editor');
-                }
-            } catch (err) {
-                showError('Failed to open editor');
-            }
-        }
-
-        async function startEnv(projectId, name) {
-            try {
-                const res = await fetch(`/api/projects/${projectId}/environments/${name}/up`, { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    loadProjects();
-                } else {
-                    showError(data.error || 'Failed to start environment');
-                }
-            } catch (err) {
-                showError('Failed to start environment');
-            }
-        }
-
-        async function stopEnv(projectId, name) {
-            try {
-                const res = await fetch(`/api/projects/${projectId}/environments/${name}/down`, { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    loadProjects();
-                } else {
-                    showError(data.error || 'Failed to stop environment');
-                }
-            } catch (err) {
-                showError('Failed to stop environment');
-            }
-        }
-
-        function showError(msg) {
-            const el = document.getElementById('error');
-            el.textContent = msg;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 5000);
-        }
-
-        let ws = null;
-        let wsReconnectTimeout = null;
-
-        function connectWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/api/orchestra/ws`;
-
-            ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                const status = document.getElementById('ws-status');
-                status.classList.add('connected');
-                status.classList.remove('disconnected');
-                status.title = 'WebSocket connected';
-            };
-
-            ws.onclose = () => {
-                const status = document.getElementById('ws-status');
-                status.classList.remove('connected');
-                status.classList.add('disconnected');
-                status.title = 'WebSocket disconnected';
-
-                wsReconnectTimeout = setTimeout(connectWebSocket, 3000);
-            };
-
-            ws.onerror = () => {
-                ws.close();
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    handleWebSocketMessage(msg);
-                } catch (err) {
-                    console.error('Failed to parse WebSocket message:', err);
-                }
-            };
-        }
-
-        function handleWebSocketMessage(msg) {
-            if (msg.type === 'notification') {
-                const notification = msg.payload;
-                notifications.set(notification.id, notification);
-                renderProjects(cachedResults);
-            } else if (msg.type === 'notification_dismissed') {
-                const data = msg.payload;
-                notifications.delete(data.id);
-                renderProjects(cachedResults);
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function handleNotificationKeypress(event, id) {
-            if (event.key === 'Enter') {
-                sendNotificationResponse(id);
-            }
-        }
-
-        const sendingNotifications = new Set();
-
-        async function sendNotificationResponse(id) {
-            if (sendingNotifications.has(id)) return;
-
-            const input = document.querySelector(`input[data-notification-id="${id}"]`);
-            if (!input) return;
-
-            const response = input.value.trim();
-            if (!response) {
-                input.focus();
-                return;
-            }
-
-            sendingNotifications.add(id);
-            input.disabled = true;
-
-            try {
-                const res = await fetch('/api/orchestra/respond', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ notification_id: id, response })
-                });
-
-                if (res.ok) {
-                    notifications.delete(id);
-                    renderProjects(cachedResults);
-                } else {
-                    const data = await res.json();
-                    showError(data.error || 'Failed to send response');
-                    input.disabled = false;
-                }
-            } catch (err) {
-                showError('Failed to send response');
-                input.disabled = false;
-            } finally {
-                sendingNotifications.delete(id);
-            }
-        }
-
-        async function sendKeyResponse(id, keys) {
-            if (sendingNotifications.has(id)) return;
-
-            sendingNotifications.add(id);
-            const notification = document.querySelector(`.env-notification[data-notification-id="${id}"]`);
+          if (res.ok) {
+            notifications.delete(id);
+            renderProjects(cachedResults);
+          } else {
+            const data = await res.json();
+            showError(data.error || "Failed to send response");
             if (notification) {
-                const buttons = notification.querySelectorAll('.btn');
-                buttons.forEach(b => b.disabled = true);
+              const buttons = notification.querySelectorAll(".btn");
+              buttons.forEach((b) => (b.disabled = false));
             }
-
-            try {
-                const res = await fetch('/api/orchestra/respond', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ notification_id: id, response: keys, response_type: 'keys' })
-                });
-
-                if (res.ok) {
-                    notifications.delete(id);
-                    renderProjects(cachedResults);
-                } else {
-                    const data = await res.json();
-                    showError(data.error || 'Failed to send response');
-                    if (notification) {
-                        const buttons = notification.querySelectorAll('.btn');
-                        buttons.forEach(b => b.disabled = false);
-                    }
-                }
-            } catch (err) {
-                showError('Failed to send response');
-                if (notification) {
-                    const buttons = notification.querySelectorAll('.btn');
-                    buttons.forEach(b => b.disabled = false);
-                }
-            } finally {
-                sendingNotifications.delete(id);
-            }
+          }
+        } catch (err) {
+          showError("Failed to send response");
+          if (notification) {
+            const buttons = notification.querySelectorAll(".btn");
+            buttons.forEach((b) => (b.disabled = false));
+          }
+        } finally {
+          sendingNotifications.delete(id);
         }
+      }
 
-        connectWebSocket();
-        loadProjects();
-        setInterval(loadProjects, 5000);
-        setInterval(updateLastUpdated, 1000);
+      connectWebSocket();
+      loadProjects();
+      setInterval(loadProjects, 5000);
+      setInterval(updateLastUpdated, 1000);
     </script>
-</body>
+  </body>
 </html>
