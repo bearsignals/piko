@@ -34,7 +34,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 		serviceName = args[1]
 	}
 
-	resolved, err := RequireDocker(name)
+	resolved, err := RequireDockerGlobally(name)
 	if err != nil {
 		return err
 	}

@@ -28,7 +28,7 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		service = args[1]
 	}
 
-	resolved, err := ResolveEnvironment(name)
+	resolved, err := ResolveEnvironmentGlobally(name)
 	if err != nil {
 		return err
 	}

@@ -21,31 +21,6 @@ func (r *ResolvedEnvironment) Close() {
 	}
 }
 
-func ResolveEnvironment(name string) (*ResolvedEnvironment, error) {
-	ctx, err := NewContext()
-	if err != nil {
-		return nil, err
-	}
-
-	environment, err := ctx.GetEnvironment(name)
-	if err != nil {
-		ctx.Close()
-		return nil, fmt.Errorf("environment %q not found", name)
-	}
-
-	composeDir := environment.Path
-	if ctx.Project.ComposeDir != "" {
-		composeDir = filepath.Join(environment.Path, ctx.Project.ComposeDir)
-	}
-
-	return &ResolvedEnvironment{
-		Ctx:         ctx,
-		Project:     ctx.Project,
-		Environment: environment,
-		ComposeDir:  composeDir,
-	}, nil
-}
-
 func ResolveEnvironmentGlobally(name string) (*ResolvedEnvironment, error) {
 	ctx, err := NewContextWithoutProject()
 	if err != nil {
@@ -103,20 +78,6 @@ func ResolveEnvironmentGlobally(name string) (*ResolvedEnvironment, error) {
 		Environment: environment,
 		ComposeDir:  composeDir,
 	}, nil
-}
-
-func RequireDocker(name string) (*ResolvedEnvironment, error) {
-	resolved, err := ResolveEnvironment(name)
-	if err != nil {
-		return nil, err
-	}
-
-	if resolved.Environment.DockerProject == "" {
-		resolved.Close()
-		return nil, fmt.Errorf("environment %q is in simple mode (no Docker containers)", name)
-	}
-
-	return resolved, nil
 }
 
 func RequireDockerGlobally(name string) (*ResolvedEnvironment, error) {

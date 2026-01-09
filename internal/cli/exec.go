@@ -52,7 +52,7 @@ func runShell(cmd *cobra.Command, args []string) error {
 }
 
 func executeInContainer(name, service string, command []string) error {
-	resolved, err := RequireDocker(name)
+	resolved, err := RequireDockerGlobally(name)
 	if err != nil {
 		return err
 	}
