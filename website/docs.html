@@ -15,6 +15,7 @@
         --text-muted: #888888;
         --accent: #00ff9d;
         --border: rgba(255, 255, 255, 0.1);
+        --sidebar-width: 220px;
         --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
           Roboto, sans-serif;
         --font-mono: "JetBrains Mono", "Fira Code", monospace;
@@ -24,6 +25,11 @@
         box-sizing: border-box;
         margin: 0;
         padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 80px;
       }
 
       body {
@@ -50,9 +56,11 @@
       }
 
       nav {
-        position: sticky;
+        position: fixed;
         top: 0;
-        background: rgba(10, 10, 10, 0.9);
+        left: 0;
+        right: 0;
+        background: rgba(10, 10, 10, 0.95);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid var(--border);
         padding: 1rem 2rem;
@@ -60,7 +68,7 @@
       }
 
       nav .inner {
-        max-width: 680px;
+        max-width: 1100px;
         margin: 0 auto;
         display: flex;
         align-items: center;
@@ -93,23 +101,94 @@
         border-radius: 50%;
       }
 
-      .container {
-        max-width: 680px;
+      .menu-toggle {
+        display: none;
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+
+      .menu-toggle:hover {
+        border-color: var(--text-main);
+      }
+
+      .layout {
+        display: flex;
+        max-width: 1100px;
         margin: 0 auto;
-        padding: 3rem 2rem 4rem;
+        padding-top: 60px;
+      }
+
+      .sidebar {
+        width: var(--sidebar-width);
+        flex-shrink: 0;
+        padding: 2rem 1.5rem;
+        position: sticky;
+        top: 60px;
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+      }
+
+      .sidebar-title {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 1rem;
+        font-family: var(--font-mono);
+      }
+
+      .sidebar ul {
+        list-style: none;
+      }
+
+      .sidebar li {
+        margin-bottom: 0.5rem;
+      }
+
+      .sidebar a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        display: block;
+        padding: 0.25rem 0;
+        transition: color 0.15s;
+      }
+
+      .sidebar a:hover,
+      .sidebar a.active {
+        color: var(--accent);
+      }
+
+      .content {
+        flex: 1;
+        min-width: 0;
+        padding: 2rem 2rem 4rem;
+        border-left: 1px solid var(--border);
       }
 
       h1 {
         font-size: 2rem;
         font-weight: 700;
         letter-spacing: -0.03em;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
       }
 
       h2 {
         font-size: 1.25rem;
         font-weight: 600;
         margin: 3rem 0 1rem;
+        padding-top: 1rem;
+      }
+
+      h2:first-of-type {
+        margin-top: 1.5rem;
       }
 
       p {
@@ -162,6 +241,45 @@
         font-size: 0.8rem;
         font-family: var(--font-mono);
         border-top: 1px solid var(--border);
+        margin-left: var(--sidebar-width);
+      }
+
+      @media (max-width: 768px) {
+        .menu-toggle {
+          display: block;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 60px;
+          left: 0;
+          width: 100%;
+          height: auto;
+          max-height: calc(100vh - 60px);
+          background: rgba(10, 10, 10, 0.98);
+          border-bottom: 1px solid var(--border);
+          padding: 1.5rem 2rem;
+          transform: translateY(-100%);
+          opacity: 0;
+          visibility: hidden;
+          transition: transform 0.3s, opacity 0.3s, visibility 0.3s;
+          z-index: 50;
+        }
+
+        .sidebar.open {
+          transform: translateY(0);
+          opacity: 1;
+          visibility: visible;
+        }
+
+        .content {
+          border-left: none;
+          padding: 2rem 1.5rem 4rem;
+        }
+
+        footer {
+          margin-left: 0;
+        }
       }
     </style>
   </head>
@@ -174,107 +292,119 @@
           <span class="logo-mark"></span>
           piko
         </a>
-        <a href="https://github.com/bearsignals/piko">GitHub</a>
+        <div style="display: flex; gap: 1.5rem; align-items: center">
+          <a href="https://github.com/bearsignals/piko">GitHub</a>
+          <button class="menu-toggle" onclick="toggleSidebar()">Menu</button>
+        </div>
       </div>
     </nav>
 
-    <div class="container">
-      <h1>How Piko Works</h1>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-title">On this page</div>
+        <ul>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#getting-started">Getting Started</a></li>
+          <li><a href="#primitives">The Primitives</a></li>
+          <li><a href="#env-vars">Environment Variables</a></li>
+          <li><a href="#configuration">Configuration</a></li>
+          <li><a href="#modes">Docker vs Simple Mode</a></li>
+          <li><a href="#navigation">Navigation</a></li>
+        </ul>
+      </aside>
 
-      <p>
-        Piko creates isolated development environments by combining three tools
-        you already know: <strong>Git worktrees</strong> for code isolation,
-        <strong>tmux</strong> for terminal sessions, and optionally
-        <strong>Docker</strong> for container orchestration.
-      </p>
+      <main class="content">
+        <h1 id="how-it-works">How Piko Works</h1>
 
-      <p>
-        Each environment gets its own branch, its own directory, its own
-        containers, and its own ports. No conflicts between environments.
-      </p>
+        <p>
+          Piko creates isolated development environments by combining three
+          tools you already know: <strong>Git worktrees</strong> for code
+          isolation, <strong>tmux</strong> for terminal sessions, and optionally
+          <strong>Docker</strong> for container orchestration.
+        </p>
 
-      <h2>Getting Started</h2>
+        <p>
+          Each environment gets its own branch, its own directory, its own
+          containers, and its own ports. No conflicts between environments.
+        </p>
 
-      <pre><code>go install github.com/bearsignals/piko@latest
+        <h2 id="getting-started">Getting Started</h2>
+
+        <pre><code>go install github.com/bearsignals/piko@latest
 
 cd ~/projects/myapp
 piko init
 piko create <span class="arg">feature-auth</span></code></pre>
 
-      <p>
-        That's it. You're now in a tmux session with your worktree, containers
-        running, and everything isolated. When you're done:
-      </p>
+        <p>
+          That's it. You're now in a tmux session with your worktree, containers
+          running, and everything isolated. When you're done:
+        </p>
 
-      <pre><code>piko destroy <span class="arg">feature-auth</span></code></pre>
+        <pre><code>piko destroy <span class="arg">feature-auth</span></code></pre>
 
-      <h2>The Primitives</h2>
+        <h2 id="primitives">The Primitives</h2>
 
-      <p>
-        Piko provides four primitives. You compose them however you need.
-      </p>
+        <p>Piko provides four primitives. You compose them however you need.</p>
 
-      <p>
-        <strong>Worktrees</strong> — Each environment is a Git worktree at
-        <code>.piko/worktrees/&lt;name&gt;</code>. Your code is isolated per
-        branch.
-      </p>
+        <p>
+          <strong>Worktrees</strong> — Each environment is a Git worktree at
+          <code>.piko/worktrees/&lt;name&gt;</code>. Your code is isolated per
+          branch.
+        </p>
 
-      <p>
-        <strong>Tmux sessions</strong> — Each environment gets a session named
-        <code>piko/&lt;project&gt;/&lt;name&gt;</code> with windows for shell,
-        services, and logs.
-      </p>
+        <p>
+          <strong>Tmux sessions</strong> — Each environment gets a session named
+          <code>piko/&lt;project&gt;/&lt;name&gt;</code> with windows for shell,
+          services, and logs.
+        </p>
 
-      <p>
-        <strong>Environment variables</strong> — Piko sets <code>PIKO_*</code>
-        variables in your session. Use them to derive ports, configure
-        databases, or anything else.
-      </p>
+        <p>
+          <strong>Environment variables</strong> — Piko sets
+          <code>PIKO_*</code>
+          variables in your session. Use them to derive ports, configure
+          databases, or anything else.
+        </p>
 
-      <p>
-        <strong>Data directories</strong> — Each environment gets
-        <code>.piko/data/&lt;name&gt;</code> for databases, caches, build
-        outputs—anything that should be isolated.
-      </p>
+        <p>
+          <strong>Data directories</strong> — Each environment gets
+          <code>.piko/data/&lt;name&gt;</code> for databases, caches, build
+          outputs—anything that should be isolated.
+        </p>
 
-      <h2>Environment Variables</h2>
+        <h2 id="env-vars">Environment Variables</h2>
 
-      <p>
-        These are available in your tmux session and scripts:
-      </p>
+        <p>These are available in your tmux session and scripts:</p>
 
-      <pre><code>PIKO_ENV_NAME   <span class="comment"># "feature-auth"</span>
+        <pre><code>PIKO_ENV_NAME   <span class="comment"># "feature-auth"</span>
 PIKO_ENV_ID     <span class="comment"># unique integer (useful for ports)</span>
 PIKO_ENV_PATH   <span class="comment"># path to worktree</span>
 PIKO_DATA_DIR   <span class="comment"># path to data directory</span>
 PIKO_ROOT       <span class="comment"># project root</span>
 PIKO_DB_PORT    <span class="comment"># allocated port (Docker mode)</span></code></pre>
 
-      <p>
-        <strong>Derive ports from PIKO_ENV_ID</strong> to avoid conflicts:
-      </p>
+        <p>
+          <strong>Derive ports from PIKO_ENV_ID</strong> to avoid conflicts:
+        </p>
 
-      <pre><code><span class="comment"># Shell</span>
+        <pre><code><span class="comment"># Shell</span>
 npm run dev -- --port $((3000 + PIKO_ENV_ID))
 
 <span class="comment"># vite.config.js</span>
 server: { port: 3000 + parseInt(process.env.PIKO_ENV_ID || 0) }</code></pre>
 
-      <p>
-        <strong>Use PIKO_DATA_DIR</strong> for local databases:
-      </p>
+        <p><strong>Use PIKO_DATA_DIR</strong> for local databases:</p>
 
-      <pre><code>DATABASE_URL=sqlite:${PIKO_DATA_DIR}/dev.db</code></pre>
+        <pre><code>DATABASE_URL=sqlite:${PIKO_DATA_DIR}/dev.db</code></pre>
 
-      <h2>Configuration</h2>
+        <h2 id="configuration">Configuration</h2>
 
-      <p>
-        Piko works without configuration. If you need to customize, create
-        <code>.piko.yml</code> in your project root:
-      </p>
+        <p>
+          Piko works without configuration. If you need to customize, create
+          <code>.piko.yml</code> in your project root:
+        </p>
 
-      <pre><code>scripts:
+        <pre><code>scripts:
   setup: |
     ln -s "$PIKO_ROOT/.env.local" .env.local
     npm install
@@ -283,37 +413,38 @@ server: { port: 3000 + parseInt(process.env.PIKO_ENV_ID || 0) }</code></pre>
     DATABASE_URL="postgres://localhost:$PIKO_DB_PORT/dev" \
     npm run dev</code></pre>
 
-      <p>
-        <strong>setup</strong> runs after environment creation.
-        <strong>run</strong> is executed by <code>piko env run &lt;name&gt;</code>.
-      </p>
+        <p>
+          <strong>setup</strong> runs after environment creation.
+          <strong>run</strong> is executed by
+          <code>piko env run &lt;name&gt;</code>.
+        </p>
 
-      <h2>Docker Mode vs Simple Mode</h2>
+        <h2 id="modes">Docker Mode vs Simple Mode</h2>
 
-      <p>
-        If your project has <code>docker-compose.yml</code>, piko orchestrates
-        containers with isolated networks and dynamically allocated ports.
-      </p>
+        <p>
+          If your project has <code>docker-compose.yml</code>, piko orchestrates
+          containers with isolated networks and dynamically allocated ports.
+        </p>
 
-      <p>
-        Without Docker Compose, piko runs in simple mode: worktrees + tmux +
-        data directories. You handle isolation using the environment variables.
-      </p>
+        <p>
+          Without Docker Compose, piko runs in simple mode: worktrees + tmux +
+          data directories. You handle isolation using the environment
+          variables.
+        </p>
 
-      <p>
-        Mode is auto-detected. No configuration needed.
-      </p>
+        <p>Mode is auto-detected. No configuration needed.</p>
 
-      <h2>Navigation</h2>
+        <h2 id="navigation">Navigation</h2>
 
-      <pre><code>piko attach <span class="arg">feature-auth</span>   <span class="comment"># attach to session</span>
+        <pre><code>piko attach <span class="arg">feature-auth</span>   <span class="comment"># attach to session</span>
 piko env pick              <span class="comment"># fuzzy-pick with fzf</span>
 piko env ls                <span class="comment"># list all environments</span></code></pre>
 
-      <p>
-        Inside tmux, standard navigation works: <code>Ctrl-b s</code> for
-        session picker, <code>Ctrl-b w</code> for windows.
-      </p>
+        <p>
+          Inside tmux, standard navigation works: <code>Ctrl-b s</code> for
+          session picker, <code>Ctrl-b w</code> for windows.
+        </p>
+      </main>
     </div>
 
     <footer>
@@ -323,5 +454,17 @@ piko env ls                <span class="comment"># list all environments</span><
       </script>
       Bearsignals
     </footer>
+
+    <script>
+      function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("open");
+      }
+
+      document.querySelectorAll(".sidebar a").forEach((link) => {
+        link.addEventListener("click", () => {
+          document.getElementById("sidebar").classList.remove("open");
+        });
+      });
+    </script>
   </body>
 </html>
