@@ -21,17 +21,27 @@ type Server struct {
 	port   int
 	db     *state.DB
 	server *http.Server
+	hub    *Hub
 }
 
 func New(port int, db *state.DB) *Server {
 	return &Server{
 		port: port,
 		db:   db,
+		hub:  NewHub(),
 	}
 }
 
 func (s *Server) Start() error {
+	go s.hub.Run()
+
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /api/orchestra/ws", s.handleOrchestraWS)
+	mux.HandleFunc("GET /api/orchestra/notifications", s.handleOrchestraList)
+	mux.HandleFunc("POST /api/orchestra/notify", s.handleOrchestraNotify)
+	mux.HandleFunc("POST /api/orchestra/respond", s.handleOrchestraRespond)
+	mux.HandleFunc("DELETE /api/orchestra/notifications/{id}", s.handleOrchestraDismiss)
 
 	mux.HandleFunc("GET /api/projects", s.handleListProjects)
 	mux.HandleFunc("GET /api/projects/{projectID}/environments", s.handleListEnvironments)
@@ -48,11 +58,20 @@ func (s *Server) Start() error {
 	}
 	mux.Handle("GET /", http.FileServer(http.FS(staticFS)))
 
+	timeoutHandler := http.TimeoutHandler(mux, 60*time.Second, "request timeout")
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/orchestra/ws" {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		timeoutHandler.ServeHTTP(w, r)
+	})
+
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.port),
-		Handler:      http.TimeoutHandler(mux, 60*time.Second, "request timeout"),
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		WriteTimeout: 0,
 		IdleTimeout:  60 * time.Second,
 	}
 

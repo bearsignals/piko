@@ -66,6 +66,18 @@ func SendKeys(sessionName, windowName, keys string) error {
 		Run()
 }
 
+func SendKeysToSession(target, keys string) error {
+	err := run.Command("tmux", "send-keys", "-t", target, "-l", keys).
+		Timeout(tmuxTimeout).
+		Run()
+	if err != nil {
+		return err
+	}
+	return run.Command("tmux", "send-keys", "-t", target, "Enter").
+		Timeout(tmuxTimeout).
+		Run()
+}
+
 func Attach(sessionName string) error {
 	cmd := exec.Command("tmux", "attach", "-t", sessionName)
 	cmd.Stdin = os.Stdin
@@ -97,7 +109,7 @@ func ListPikoSessions() ([]string, error) {
 	}
 
 	var sessions []string
-	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
 		if strings.HasPrefix(line, "piko/") {
 			sessions = append(sessions, line)
 		}
