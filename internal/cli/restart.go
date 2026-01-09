@@ -9,10 +9,11 @@ import (
 )
 
 var restartCmd = &cobra.Command{
-	Use:   "restart <name> [service]",
-	Short: "Restart containers for an environment",
-	Args:  cobra.RangeArgs(1, 2),
-	RunE:  runRestart,
+	Use:         "restart <name> [service]",
+	Short:       "Restart containers for an environment",
+	Args:        cobra.RangeArgs(1, 2),
+	RunE:        runRestart,
+	Annotations: Requires(ToolDocker),
 }
 
 func init() {

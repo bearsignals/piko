@@ -6,10 +6,11 @@ import (
 )
 
 var downCmd = &cobra.Command{
-	Use:   "down <name>",
-	Short: "Stop containers for an environment",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runDown,
+	Use:         "down <name>",
+	Short:       "Stop containers for an environment",
+	Args:        cobra.ExactArgs(1),
+	RunE:        runDown,
+	Annotations: Requires(ToolDocker),
 }
 
 func init() {

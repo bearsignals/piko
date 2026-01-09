@@ -8,10 +8,11 @@ import (
 )
 
 var logsCmd = &cobra.Command{
-	Use:   "logs <name> [service]",
-	Short: "View container logs",
-	Args:  cobra.RangeArgs(1, 2),
-	RunE:  runLogs,
+	Use:         "logs <name> [service]",
+	Short:       "View container logs",
+	Args:        cobra.RangeArgs(1, 2),
+	RunE:        runLogs,
+	Annotations: Requires(ToolDocker),
 }
 
 var (

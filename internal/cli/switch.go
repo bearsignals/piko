@@ -8,11 +8,12 @@ import (
 )
 
 var switchCmd = &cobra.Command{
-	Use:   "switch <name>",
-	Short: "Switch to an environment's tmux session",
-	Long:  "Switch to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runSwitch,
+	Use:         "switch <name>",
+	Short:       "Switch to an environment's tmux session",
+	Long:        "Switch to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
+	Args:        cobra.ExactArgs(1),
+	RunE:        runSwitch,
+	Annotations: Requires(ToolTmux),
 }
 
 func init() {

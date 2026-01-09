@@ -153,8 +153,10 @@ func CreateFullSession(cfg SessionConfig) error {
 		}
 	}
 
-	logsCmd := fmt.Sprintf("docker compose -p %s logs -f", cfg.DockerProject)
-	NewWindow(cfg.SessionName, "logs", cfg.WorkDir, logsCmd)
+	if cfg.DockerProject != "" {
+		logsCmd := fmt.Sprintf("docker compose -p %s logs -f", cfg.DockerProject)
+		NewWindow(cfg.SessionName, "logs", cfg.WorkDir, logsCmd)
+	}
 
 	return nil
 }

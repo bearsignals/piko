@@ -8,11 +8,12 @@ import (
 )
 
 var attachCmd = &cobra.Command{
-	Use:   "attach <name>",
-	Short: "Attach to an environment's tmux session",
-	Long:  "Attach to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runAttach,
+	Use:         "attach <name>",
+	Short:       "Attach to an environment's tmux session",
+	Long:        "Attach to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
+	Args:        cobra.ExactArgs(1),
+	RunE:        runAttach,
+	Annotations: Requires(ToolTmux),
 }
 
 func init() {

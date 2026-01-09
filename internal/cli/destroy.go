@@ -6,10 +6,11 @@ import (
 )
 
 var destroyCmd = &cobra.Command{
-	Use:   "destroy <name>",
-	Short: "Destroy an environment completely",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runDestroy,
+	Use:         "destroy <name>",
+	Short:       "Destroy an environment completely",
+	Args:        cobra.ExactArgs(1),
+	RunE:        runDestroy,
+	Annotations: Requires(ToolGit, ToolTmux),
 }
 
 var destroyVolumes bool

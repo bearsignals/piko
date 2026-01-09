@@ -7,10 +7,11 @@ import (
 )
 
 var createCmd = &cobra.Command{
-	Use:   "create <name>",
-	Short: "Create a new worktree environment",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runCreate,
+	Use:         "create <name>",
+	Short:       "Create a new worktree environment",
+	Args:        cobra.ExactArgs(1),
+	RunE:        runCreate,
+	Annotations: Requires(ToolGit, ToolTmux),
 }
 
 var (
