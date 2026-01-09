@@ -512,523 +512,523 @@
     </div>
 
     <script>
-      let lastUpdated = null;
-      let projectsData = [];
-      let notifications = new Map();
-      let cachedResults = [];
+            let lastUpdated = null;
+            let projectsData = [];
+            let notifications = new Map();
+            let cachedResults = [];
 
-      async function loadProjects() {
-        try {
-          const res = await fetch("/api/projects");
-          projectsData = await res.json();
+            async function loadProjects() {
+              try {
+                const res = await fetch("/api/projects");
+                projectsData = await res.json();
 
-          if (projectsData.length === 0) {
-            document.getElementById("projects-container").innerHTML = "";
-            document.getElementById("empty-state").classList.remove("hidden");
-            return;
-          }
+                if (projectsData.length === 0) {
+                  document.getElementById("projects-container").innerHTML = "";
+                  document.getElementById("empty-state").classList.remove("hidden");
+                  return;
+                }
 
-          document.getElementById("empty-state").classList.add("hidden");
+                document.getElementById("empty-state").classList.add("hidden");
 
-          const envPromises = projectsData.map(async (project) => {
-            const envRes = await fetch(
-              `/api/projects/${project.id}/environments`
-            );
-            const environments = await envRes.json();
-            return { project, environments };
-          });
+                const envPromises = projectsData.map(async (project) => {
+                  const envRes = await fetch(
+                    `/api/projects/${project.id}/environments`
+                  );
+                  const environments = await envRes.json();
+                  return { project, environments };
+                });
 
-          cachedResults = await Promise.all(envPromises);
-          renderProjects(cachedResults);
-          lastUpdated = new Date();
-          updateLastUpdated();
-        } catch (err) {
-          showError("Failed to load projects");
-        }
-      }
-
-      function updateLastUpdated() {
-        if (!lastUpdated) return;
-        const el = document.getElementById("last-updated");
-        const seconds = Math.floor((new Date() - lastUpdated) / 1000);
-        if (seconds < 5) {
-          el.textContent = "Updated just now";
-        } else if (seconds < 60) {
-          el.textContent = `Updated ${seconds}s ago`;
-        } else {
-          el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
-        }
-      }
-
-      async function refresh() {
-        const btn = document.querySelector(".refresh-btn");
-        btn.classList.add("spinning");
-        await loadProjects();
-        setTimeout(() => btn.classList.remove("spinning"), 500);
-      }
-
-      function getStatusText(env) {
-        if (env.mode === "simple") {
-          return { text: "simple", class: "" };
-        }
-        if (env.total === 0) {
-          return { text: env.status, class: "" };
-        }
-        if (env.running === env.total) {
-          return { text: `${env.running}/${env.total}`, class: "healthy" };
-        }
-        if (env.running === 0) {
-          return { text: "stopped", class: "" };
-        }
-        return { text: `${env.running}/${env.total}`, class: "partial" };
-      }
-
-      function renderPorts(ports) {
-        if (!ports || ports.length === 0) return "";
-
-        const portItems = ports
-          .map((p) => {
-            const address = `localhost:${p.hostPort}`;
-            if (p.url) {
-              return `
-                        <div class="port-item">
-                            <span class="port-service">${p.service}</span>
-                            <a href="${p.url}" target="_blank" class="port-url">${p.url}</a>
-                            <button class="copy-btn" onclick="copyToClipboard('${p.url}', this)" title="Copy">cp</button>
-                        </div>
-                    `;
+                cachedResults = await Promise.all(envPromises);
+                renderProjects(cachedResults);
+                lastUpdated = new Date();
+                updateLastUpdated();
+              } catch (err) {
+                showError("Failed to load projects");
+              }
             }
-            return `
-                    <div class="port-item">
-                        <span class="port-service">${p.service}</span>
-                        <span class="port-address">${address}</span>
-                        <button class="copy-btn" onclick="copyToClipboard('${address}', this)" title="Copy">cp</button>
-                    </div>
-                `;
-          })
-          .join("");
 
-        return `
-                <div class="ports-section">
-                    <div class="ports-list">${portItems}</div>
-                </div>
-            `;
-      }
+            function updateLastUpdated() {
+              if (!lastUpdated) return;
+              const el = document.getElementById("last-updated");
+              const seconds = Math.floor((new Date() - lastUpdated) / 1000);
+              if (seconds < 5) {
+                el.textContent = "Updated just now";
+              } else if (seconds < 60) {
+                el.textContent = `Updated ${seconds}s ago`;
+              } else {
+                el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
+              }
+            }
 
-      function renderProjects(results) {
-        const container = document.getElementById("projects-container");
+            async function refresh() {
+              const btn = document.querySelector(".refresh-btn");
+              btn.classList.add("spinning");
+              await loadProjects();
+              setTimeout(() => btn.classList.remove("spinning"), 500);
+            }
 
-        const columnsHtml = results
-          .map(({ project, environments }) => {
-            const dockerEnvs = environments.filter((e) => e.mode !== "simple");
-            const runningCount = dockerEnvs.filter(
-              (e) => e.status === "running"
-            ).length;
-            const simpleCount = environments.filter(
-              (e) => e.mode === "simple"
-            ).length;
+            function getStatusText(env) {
+              if (env.mode === "simple") {
+                return { text: "simple", class: "" };
+              }
+              if (env.total === 0) {
+                return { text: env.status, class: "" };
+              }
+              if (env.running === env.total) {
+                return { text: `${env.running}/${env.total}`, class: "healthy" };
+              }
+              if (env.running === 0) {
+                return { text: "stopped", class: "" };
+              }
+              return { text: `${env.running}/${env.total}`, class: "partial" };
+            }
 
-            let envsHtml;
-            if (environments.length === 0) {
-              envsHtml = `<div class="no-envs">No environments</div>`;
-            } else {
-              envsHtml = environments
-                .map((env) => renderEnvironment(project, env))
+            function renderPorts(ports) {
+              if (!ports || ports.length === 0) return "";
+
+              const portItems = ports
+                .map((p) => {
+                  const address = `localhost:${p.hostPort}`;
+                  if (p.url) {
+                    return `
+                              <div class="port-item">
+                                  <span class="port-service">${p.service}</span>
+                                  <a href="${p.url}" target="_blank" class="port-url">${p.url}</a>
+                                  <button class="copy-btn" onclick="copyToClipboard('${p.url}', this)" title="Copy">cp</button>
+                              </div>
+                          `;
+                  }
+                  return `
+                          <div class="port-item">
+                              <span class="port-service">${p.service}</span>
+                              <span class="port-address">${address}</span>
+                              <button class="copy-btn" onclick="copyToClipboard('${address}', this)" title="Copy">cp</button>
+                          </div>
+                      `;
+                })
                 .join("");
+
+              return `
+                      <div class="ports-section">
+                          <div class="ports-list">${portItems}</div>
+                      </div>
+                  `;
             }
 
-            let countText = "";
-            if (dockerEnvs.length > 0) {
-              countText = `${runningCount}/${dockerEnvs.length}`;
+            function renderProjects(results) {
+              const container = document.getElementById("projects-container");
+
+              const columnsHtml = results
+                .map(({ project, environments }) => {
+                  const dockerEnvs = environments.filter((e) => e.mode !== "simple");
+                  const runningCount = dockerEnvs.filter(
+                    (e) => e.status === "running"
+                  ).length;
+                  const simpleCount = environments.filter(
+                    (e) => e.mode === "simple"
+                  ).length;
+
+                  let envsHtml;
+                  if (environments.length === 0) {
+                    envsHtml = `<div class="no-envs">No environments</div>`;
+                  } else {
+                    envsHtml = environments
+                      .map((env) => renderEnvironment(project, env))
+                      .join("");
+                  }
+
+                  let countText = "";
+                  if (dockerEnvs.length > 0) {
+                    countText = `${runningCount}/${dockerEnvs.length}`;
+                  }
+                  if (simpleCount > 0) {
+                    countText += countText ? ` + ${simpleCount}s` : `${simpleCount}s`;
+                  }
+
+                  return `
+                          <div class="project-column">
+                              <div class="project-header">
+                                  <span class="project-title">${project.name}</span>
+                                  <div class="project-meta">
+                                      <span class="project-count">${countText}</span>
+                                      <button class="btn btn-small" onclick="showCreateModal(${project.id})">+ New</button>
+                                  </div>
+                              </div>
+                              <div class="env-list">${envsHtml}</div>
+                          </div>
+                      `;
+                })
+                .join("");
+
+              container.innerHTML = `<div class="projects-grid">${columnsHtml}</div>`;
             }
-            if (simpleCount > 0) {
-              countText += countText ? ` + ${simpleCount}s` : `${simpleCount}s`;
+
+            function renderSimpleInfo(env) {
+              if (env.mode !== "simple") return "";
+              return `
+                      <div class="ports-section">
+                          <div class="ports-list">
+                              <div class="port-item">
+                                  <span class="port-service">id</span>
+                                  <span class="port-address">${env.envId}</span>
+                                  <button class="copy-btn" onclick="copyToClipboard('${env.envId}', this)">cp</button>
+                              </div>
+                          </div>
+                      </div>
+                  `;
             }
 
-            return `
-                    <div class="project-column">
-                        <div class="project-header">
-                            <span class="project-title">${project.name}</span>
-                            <div class="project-meta">
-                                <span class="project-count">${countText}</span>
-                                <button class="btn btn-small" onclick="showCreateModal(${project.id})">+ New</button>
-                            </div>
-                        </div>
-                        <div class="env-list">${envsHtml}</div>
-                    </div>
-                `;
-          })
-          .join("");
+            function getEnvNotifications(projectName, envName) {
+              const key = `${projectName}/${envName}`;
+              return Array.from(notifications.values()).filter(
+                (n) => `${n.project_name}/${n.env_name}` === key
+              );
+            }
 
-        container.innerHTML = `<div class="projects-grid">${columnsHtml}</div>`;
-      }
+            function renderNotification(n) {
+              let actions = "";
+              if (n.notification_type === "permission_prompt") {
+                actions = `
+                          <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+                          <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+                      `;
+              } else {
+                actions = `
+                          <input type="text" class="notification-input" placeholder="Response..."
+                              onkeypress="handleNotificationKeypress(event, '${n.id}')" data-notification-id="${n.id}">
+                          <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
+                      `;
+              }
 
-      function renderSimpleInfo(env) {
-        if (env.mode !== "simple") return "";
-        return `
-                <div class="ports-section">
-                    <div class="ports-list">
-                        <div class="port-item">
-                            <span class="port-service">id</span>
-                            <span class="port-address">${env.envId}</span>
-                            <button class="copy-btn" onclick="copyToClipboard('${env.envId}', this)">cp</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-      }
+              return `
+                      <div class="env-notification" data-notification-id="${n.id}">
+                          <div class="notification-label">${n.notification_type}</div>
+                          <div class="notification-message">${escapeHtml(
+                            n.message
+                          )}</div>
+                          <div class="notification-actions">${actions}</div>
+                      </div>
+                  `;
+            }
 
-      function getEnvNotifications(projectName, envName) {
-        const key = `${projectName}/${envName}`;
-        return Array.from(notifications.values()).filter(
-          (n) => `${n.project_name}/${n.env_name}` === key
-        );
-      }
+            function renderEnvironment(project, env) {
+              const statusInfo = getStatusText(env);
+              const isSimple = env.mode === "simple";
+              const envNotifications = getEnvNotifications(project.name, env.name);
+              const hasNotification = envNotifications.length > 0;
+              const showBranch = env.branch !== env.name;
 
-      function renderNotification(n) {
-        let actions = "";
-        if (n.notification_type === "permission_prompt") {
-          actions = `
-                    <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
-                    <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
-                `;
-        } else {
-          actions = `
-                    <input type="text" class="notification-input" placeholder="Response..."
-                        onkeypress="handleNotificationKeypress(event, '${n.id}')" data-notification-id="${n.id}">
-                    <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
-                `;
-        }
+              const notificationsHtml = envNotifications
+                .map((n) => renderNotification(n))
+                .join("");
 
-        return `
-                <div class="env-notification" data-notification-id="${n.id}">
-                    <div class="notification-label">${n.notification_type}</div>
-                    <div class="notification-message">${escapeHtml(
-                      n.message
-                    )}</div>
-                    <div class="notification-actions">${actions}</div>
-                </div>
-            `;
-      }
+              const actionButtons = isSimple
+                ? `<button class="btn btn-small btn-secondary" onclick="openInEditor(${project.id}, '${env.name}')">Edit</button>`
+                : `<div class="env-header-actions">
+                          <button class="btn btn-small btn-secondary" onclick="openInEditor(${
+                            project.id
+                          }, '${env.name}')">Edit</button>
+                          ${
+                            env.status === "running"
+                              ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}')">Stop</button>`
+                              : `<button class="btn btn-small" onclick="startEnv(${project.id}, '${env.name}')">Start</button>`
+                          }
+                         </div>`;
 
-      function renderEnvironment(project, env) {
-        const statusInfo = getStatusText(env);
-        const isSimple = env.mode === "simple";
-        const envNotifications = getEnvNotifications(project.name, env.name);
-        const hasNotification = envNotifications.length > 0;
-        const showBranch = env.branch !== env.name;
+              return `
+                      <div class="env-card-wrapper">
+                          <div class="env-card ${
+                            hasNotification ? "has-notification" : ""
+                          }">
+                              <div class="env-header">
+                                  <div class="env-name">
+                                      <span class="status-dot ${env.status}"></span>
+                                      ${env.name}
+                                      ${
+                                        !isSimple
+                                          ? `<span class="status-text ${statusInfo.class}">${statusInfo.text}</span>`
+                                          : ""
+                                      }
+                                  </div>
+                                  ${actionButtons}
+                              </div>
+                              ${
+                                showBranch
+                                  ? `<div class="env-branch">${env.branch}</div>`
+                                  : ""
+                              }
+                              ${isSimple ? "" : renderPorts(env.ports)}
+                          </div>
+                          ${notificationsHtml}
+                      </div>
+                  `;
+            }
 
-        const notificationsHtml = envNotifications
-          .map((n) => renderNotification(n))
-          .join("");
+            async function copyToClipboard(text, btn) {
+              try {
+                await navigator.clipboard.writeText(text);
+                btn.classList.add("copied");
+                const orig = btn.textContent;
+                btn.textContent = "✓";
+                setTimeout(() => {
+                  btn.classList.remove("copied");
+                  btn.textContent = orig;
+                }, 1500);
+              } catch (err) {
+                showError("Failed to copy to clipboard");
+              }
+            }
 
-        const actionButtons = isSimple
-          ? `<button class="btn btn-small btn-secondary" onclick="openInEditor(${project.id}, '${env.name}')">Edit</button>`
-          : `<div class="env-header-actions">
-                    <button class="btn btn-small btn-secondary" onclick="openInEditor(${
-                      project.id
-                    }, '${env.name}')">Edit</button>
-                    ${
-                      env.status === "running"
-                        ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}')">Stop</button>`
-                        : `<button class="btn btn-small" onclick="startEnv(${project.id}, '${env.name}')">Start</button>`
-                    }
-                   </div>`;
+            function showCreateModal(projectId) {
+              document.getElementById("create-project-id").value = projectId;
+              document.getElementById("create-modal").classList.remove("hidden");
+              document.getElementById("env-name").focus();
+            }
 
-        return `
-                <div class="env-card-wrapper">
-                    <div class="env-card ${
-                      hasNotification ? "has-notification" : ""
-                    }">
-                        <div class="env-header">
-                            <div class="env-name">
-                                <span class="status-dot ${env.status}"></span>
-                                ${env.name}
-                                ${
-                                  !isSimple
-                                    ? `<span class="status-text ${statusInfo.class}">${statusInfo.text}</span>`
-                                    : ""
-                                }
-                            </div>
-                            ${actionButtons}
-                        </div>
-                        ${
-                          showBranch
-                            ? `<div class="env-branch">${env.branch}</div>`
-                            : ""
-                        }
-                        ${isSimple ? "" : renderPorts(env.ports)}
-                    </div>
-                    ${notificationsHtml}
-                </div>
-            `;
-      }
+            function hideCreateModal() {
+              document.getElementById("create-modal").classList.add("hidden");
+              document.getElementById("create-form").reset();
+            }
 
-      async function copyToClipboard(text, btn) {
-        try {
-          await navigator.clipboard.writeText(text);
-          btn.classList.add("copied");
-          const orig = btn.textContent;
-          btn.textContent = "✓";
-          setTimeout(() => {
-            btn.classList.remove("copied");
-            btn.textContent = orig;
-          }, 1500);
-        } catch (err) {
-          showError("Failed to copy to clipboard");
-        }
-      }
+            async function createEnvironment(e) {
+              e.preventDefault();
+              const btn = document.getElementById("create-btn");
+              const projectId = document.getElementById("create-project-id").value;
+              const name = document.getElementById("env-name").value;
+              const branch = document.getElementById("env-branch").value;
 
-      function showCreateModal(projectId) {
-        document.getElementById("create-project-id").value = projectId;
-        document.getElementById("create-modal").classList.remove("hidden");
-        document.getElementById("env-name").focus();
-      }
+              btn.disabled = true;
+              btn.textContent = "Creating...";
 
-      function hideCreateModal() {
-        document.getElementById("create-modal").classList.add("hidden");
-        document.getElementById("create-form").reset();
-      }
+              try {
+                const res = await fetch(`/api/projects/${projectId}/environments`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name, branch: branch || "" }),
+                });
+                const data = await res.json();
 
-      async function createEnvironment(e) {
-        e.preventDefault();
-        const btn = document.getElementById("create-btn");
-        const projectId = document.getElementById("create-project-id").value;
-        const name = document.getElementById("env-name").value;
-        const branch = document.getElementById("env-branch").value;
+                if (data.success) {
+                  hideCreateModal();
+                  loadProjects();
+                } else {
+                  showError(data.error || "Failed to create environment");
+                }
+              } catch (err) {
+                showError("Failed to create environment");
+              } finally {
+                btn.disabled = false;
+                btn.textContent = "Create";
+              }
+            }
 
-        btn.disabled = true;
-        btn.textContent = "Creating...";
+            async function openInEditor(projectId, name) {
+              try {
+                const res = await fetch(
+                  `/api/projects/${projectId}/environments/${name}/open`,
+                  { method: "POST" }
+                );
+                const data = await res.json();
+                if (!data.success) {
+                  showError(data.error || "Failed to open editor");
+                }
+              } catch (err) {
+                showError("Failed to open editor");
+              }
+            }
 
-        try {
-          const res = await fetch(`/api/projects/${projectId}/environments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, branch: branch || "" }),
-          });
-          const data = await res.json();
+            async function startEnv(projectId, name) {
+              try {
+                const res = await fetch(
+                  `/api/projects/${projectId}/environments/${name}/up`,
+                  { method: "POST" }
+                );
+                const data = await res.json();
+                if (!data.success) {
+                  showError(data.error || "Failed to start environment");
+                }
+              } catch (err) {
+                showError("Failed to start environment");
+              }
+            }
 
-          if (data.success) {
-            hideCreateModal();
+            async function stopEnv(projectId, name) {
+              try {
+                const res = await fetch(
+                  `/api/projects/${projectId}/environments/${name}/down`,
+                  { method: "POST" }
+                );
+                const data = await res.json();
+                if (!data.success) {
+                  showError(data.error || "Failed to stop environment");
+                }
+              } catch (err) {
+                showError("Failed to stop environment");
+              }
+            }
+
+            function showError(msg) {
+              const el = document.getElementById("error");
+              el.textContent = msg;
+              el.classList.remove("hidden");
+              setTimeout(() => el.classList.add("hidden"), 5000);
+            }
+
+            let ws = null;
+            let wsReconnectTimeout = null;
+
+            function connectWebSocket() {
+              const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+              const wsUrl = `${protocol}//${window.location.host}/api/orchestra/ws`;
+
+              ws = new WebSocket(wsUrl);
+
+              ws.onopen = () => {
+                const status = document.getElementById("ws-status");
+                status.classList.add("connected");
+                status.classList.remove("disconnected");
+                status.title = "WebSocket connected";
+              };
+
+              ws.onclose = () => {
+                const status = document.getElementById("ws-status");
+                status.classList.remove("connected");
+                status.classList.add("disconnected");
+                status.title = "WebSocket disconnected";
+
+                wsReconnectTimeout = setTimeout(connectWebSocket, 3000);
+              };
+
+              ws.onerror = () => {
+                ws.close();
+              };
+
+              ws.onmessage = (event) => {
+                try {
+                  const msg = JSON.parse(event.data);
+                  handleWebSocketMessage(msg);
+                } catch (err) {
+                  console.error("Failed to parse WebSocket message:", err);
+                }
+              };
+            }
+
+            function handleWebSocketMessage(msg) {
+              if (msg.type === "notification") {
+                const notification = msg.payload;
+                notifications.set(notification.id, notification);
+                renderProjects(cachedResults);
+              } else if (msg.type === "notification_dismissed") {
+                const data = msg.payload;
+                notifications.delete(data.id);
+                renderProjects(cachedResults);
+              } else if (msg.type === "state_change") {
+                loadProjects();
+              }
+            }
+
+            function escapeHtml(text) {
+              const div = document.createElement("div");
+              div.textContent = text;
+              return div.innerHTML;
+            }
+
+            function handleNotificationKeypress(event, id) {
+              if (event.key === "Enter") {
+                sendNotificationResponse(id);
+              }
+            }
+
+            const sendingNotifications = new Set();
+
+            async function sendNotificationResponse(id) {
+              if (sendingNotifications.has(id)) return;
+
+              const input = document.querySelector(
+                `input[data-notification-id="${id}"]`
+              );
+              if (!input) return;
+
+              const response = input.value.trim();
+              if (!response) {
+                input.focus();
+                return;
+              }
+
+              sendingNotifications.add(id);
+              input.disabled = true;
+
+              try {
+                const res = await fetch("/api/orchestra/respond", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ notification_id: id, response }),
+                });
+
+                if (res.ok) {
+                  notifications.delete(id);
+                  renderProjects(cachedResults);
+                } else {
+                  const data = await res.json();
+                  showError(data.error || "Failed to send response");
+                  input.disabled = false;
+                }
+              } catch (err) {
+                showError("Failed to send response");
+                input.disabled = false;
+              } finally {
+                sendingNotifications.delete(id);
+              }
+            }
+
+            async function sendKeyResponse(id, keys) {
+              if (sendingNotifications.has(id)) return;
+
+              sendingNotifications.add(id);
+              const notification = document.querySelector(
+                `.env-notification[data-notification-id="${id}"]`
+              );
+              if (notification) {
+                const buttons = notification.querySelectorAll(".btn");
+                buttons.forEach((b) => (b.disabled = true));
+              }
+
+              try {
+                const res = await fetch("/api/orchestra/respond", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    notification_id: id,
+                    response: keys,
+                    response_type: "keys",
+                  }),
+                });
+
+                if (res.ok) {
+                  notifications.delete(id);
+                  renderProjects(cachedResults);
+                } else {
+                  const data = await res.json();
+                  showError(data.error || "Failed to send response");
+                  if (notification) {
+                    const buttons = notification.querySelectorAll(".btn");
+                    buttons.forEach((b) => (b.disabled = false));
+                  }
+                }
+              } catch (err) {
+                showError("Failed to send response");
+                if (notification) {
+                  const buttons = notification.querySelectorAll(".btn");
+                  buttons.forEach((b) => (b.disabled = false));
+                }
+              } finally {
+                sendingNotifications.delete(id);
+              }
+            }
+
+            connectWebSocket();
             loadProjects();
-          } else {
-            showError(data.error || "Failed to create environment");
-          }
-        } catch (err) {
-          showError("Failed to create environment");
-        } finally {
-          btn.disabled = false;
-          btn.textContent = "Create";
-        }
-      }
-
-      async function openInEditor(projectId, name) {
-        try {
-          const res = await fetch(
-            `/api/projects/${projectId}/environments/${name}/open`,
-            { method: "POST" }
-          );
-          const data = await res.json();
-          if (!data.success) {
-            showError(data.error || "Failed to open editor");
-          }
-        } catch (err) {
-          showError("Failed to open editor");
-        }
-      }
-
-      async function startEnv(projectId, name) {
-        try {
-          const res = await fetch(
-            `/api/projects/${projectId}/environments/${name}/up`,
-            { method: "POST" }
-          );
-          const data = await res.json();
-          if (!data.success) {
-            showError(data.error || "Failed to start environment");
-          }
-        } catch (err) {
-          showError("Failed to start environment");
-        }
-      }
-
-      async function stopEnv(projectId, name) {
-        try {
-          const res = await fetch(
-            `/api/projects/${projectId}/environments/${name}/down`,
-            { method: "POST" }
-          );
-          const data = await res.json();
-          if (!data.success) {
-            showError(data.error || "Failed to stop environment");
-          }
-        } catch (err) {
-          showError("Failed to stop environment");
-        }
-      }
-
-      function showError(msg) {
-        const el = document.getElementById("error");
-        el.textContent = msg;
-        el.classList.remove("hidden");
-        setTimeout(() => el.classList.add("hidden"), 5000);
-      }
-
-      let ws = null;
-      let wsReconnectTimeout = null;
-
-      function connectWebSocket() {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/api/orchestra/ws`;
-
-        ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-          const status = document.getElementById("ws-status");
-          status.classList.add("connected");
-          status.classList.remove("disconnected");
-          status.title = "WebSocket connected";
-        };
-
-        ws.onclose = () => {
-          const status = document.getElementById("ws-status");
-          status.classList.remove("connected");
-          status.classList.add("disconnected");
-          status.title = "WebSocket disconnected";
-
-          wsReconnectTimeout = setTimeout(connectWebSocket, 3000);
-        };
-
-        ws.onerror = () => {
-          ws.close();
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            handleWebSocketMessage(msg);
-          } catch (err) {
-            console.error("Failed to parse WebSocket message:", err);
-          }
-        };
-      }
-
-      function handleWebSocketMessage(msg) {
-        if (msg.type === "notification") {
-          const notification = msg.payload;
-          notifications.set(notification.id, notification);
-          renderProjects(cachedResults);
-        } else if (msg.type === "notification_dismissed") {
-          const data = msg.payload;
-          notifications.delete(data.id);
-          renderProjects(cachedResults);
-        } else if (msg.type === "state_change") {
-          loadProjects();
-        }
-      }
-
-      function escapeHtml(text) {
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML;
-      }
-
-      function handleNotificationKeypress(event, id) {
-        if (event.key === "Enter") {
-          sendNotificationResponse(id);
-        }
-      }
-
-      const sendingNotifications = new Set();
-
-      async function sendNotificationResponse(id) {
-        if (sendingNotifications.has(id)) return;
-
-        const input = document.querySelector(
-          `input[data-notification-id="${id}"]`
-        );
-        if (!input) return;
-
-        const response = input.value.trim();
-        if (!response) {
-          input.focus();
-          return;
-        }
-
-        sendingNotifications.add(id);
-        input.disabled = true;
-
-        try {
-          const res = await fetch("/api/orchestra/respond", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ notification_id: id, response }),
-          });
-
-          if (res.ok) {
-            notifications.delete(id);
-            renderProjects(cachedResults);
-          } else {
-            const data = await res.json();
-            showError(data.error || "Failed to send response");
-            input.disabled = false;
-          }
-        } catch (err) {
-          showError("Failed to send response");
-          input.disabled = false;
-        } finally {
-          sendingNotifications.delete(id);
-        }
-      }
-
-      async function sendKeyResponse(id, keys) {
-        if (sendingNotifications.has(id)) return;
-
-        sendingNotifications.add(id);
-        const notification = document.querySelector(
-          `.env-notification[data-notification-id="${id}"]`
-        );
-        if (notification) {
-          const buttons = notification.querySelectorAll(".btn");
-          buttons.forEach((b) => (b.disabled = true));
-        }
-
-        try {
-          const res = await fetch("/api/orchestra/respond", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              notification_id: id,
-              response: keys,
-              response_type: "keys",
-            }),
-          });
-
-          if (res.ok) {
-            notifications.delete(id);
-            renderProjects(cachedResults);
-          } else {
-            const data = await res.json();
-            showError(data.error || "Failed to send response");
-            if (notification) {
-              const buttons = notification.querySelectorAll(".btn");
-              buttons.forEach((b) => (b.disabled = false));
-            }
-          }
-        } catch (err) {
-          showError("Failed to send response");
-          if (notification) {
-            const buttons = notification.querySelectorAll(".btn");
-            buttons.forEach((b) => (b.disabled = false));
-          }
-        } finally {
-          sendingNotifications.delete(id);
-        }
-      }
-
-      connectWebSocket();
-      loadProjects();
-      setInterval(updateLastUpdated, 1000);
+            setInterval(updateLastUpdated, 1000);
     </script>
   </body>
 </html>
