@@ -27,6 +27,13 @@ func runDown(cmd *cobra.Command, args []string) error {
 	}
 	defer resolved.Close()
 
+	api := NewAPIClient()
+	if api.IsServerRunning() {
+		if err := api.Down(resolved.Project.ID, resolved.Environment.Name); err == nil {
+			return nil
+		}
+	}
+
 	return operations.DownEnvironment(operations.DownEnvironmentOptions{
 		DB:          resolved.Ctx.DB,
 		Project:     resolved.Project,

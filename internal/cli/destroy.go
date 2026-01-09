@@ -30,6 +30,13 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 	}
 	defer resolved.Close()
 
+	api := NewAPIClient()
+	if api.IsServerRunning() {
+		if err := api.DestroyEnvironment(resolved.Project.ID, resolved.Environment.Name, destroyVolumes); err == nil {
+			return nil
+		}
+	}
+
 	return operations.DestroyEnvironment(operations.DestroyEnvironmentOptions{
 		DB:            resolved.Ctx.DB,
 		Project:       resolved.Project,

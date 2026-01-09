@@ -76,6 +76,17 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	api := NewAPIClient()
+	if api.IsServerRunning() {
+		if err := api.CreateEnvironment(project.ID, name, createBranch); err == nil {
+			sessionName := tmux.SessionName(project.Name, name)
+			if !createNoAttach && tmux.SessionExists(sessionName) {
+				return tmux.Attach(sessionName)
+			}
+			return nil
+		}
+	}
+
 	result, err := operations.CreateEnvironment(operations.CreateEnvironmentOptions{
 		DB:      db,
 		Project: project,

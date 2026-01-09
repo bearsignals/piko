@@ -27,6 +27,13 @@ func runUp(cmd *cobra.Command, args []string) error {
 	}
 	defer resolved.Close()
 
+	api := NewAPIClient()
+	if api.IsServerRunning() {
+		if err := api.Up(resolved.Project.ID, resolved.Environment.Name); err == nil {
+			return nil
+		}
+	}
+
 	return operations.UpEnvironment(operations.UpEnvironmentOptions{
 		DB:          resolved.Ctx.DB,
 		Project:     resolved.Project,

@@ -294,6 +294,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 		mode = "simple"
 	}
 
+	s.broadcastStateChange("env_created", project.ID, result.Environment.Name)
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Success: true,
 		Environment: &EnvironmentResponse{
@@ -310,6 +311,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleDestroyEnvironment(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
+	removeVolumes := r.URL.Query().Get("volumes") == "true"
 
 	project, err := s.getProjectFromPath(r)
 	if err != nil {
@@ -327,7 +329,7 @@ func (s *Server) handleDestroyEnvironment(w http.ResponseWriter, r *http.Request
 		DB:            s.db,
 		Project:       project,
 		Environment:   environment,
-		RemoveVolumes: false,
+		RemoveVolumes: removeVolumes,
 		Logger:        &operations.SilentLogger{},
 	})
 	if err != nil {
@@ -335,6 +337,7 @@ func (s *Server) handleDestroyEnvironment(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	s.broadcastStateChange("env_deleted", project.ID, name)
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }
 
@@ -398,6 +401,7 @@ func (s *Server) handleUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.broadcastStateChange("env_updated", project.ID, name)
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }
 
@@ -427,6 +431,7 @@ func (s *Server) handleDown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.broadcastStateChange("env_updated", project.ID, name)
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }
 
@@ -434,4 +439,63 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+type StateChangePayload struct {
+	EventType string `json:"event_type"`
+	ProjectID int64  `json:"project_id"`
+	EnvName   string `json:"env_name"`
+}
+
+func (s *Server) broadcastStateChange(eventType string, projectID int64, envName string) {
+	payload, err := json.Marshal(StateChangePayload{
+		EventType: eventType,
+		ProjectID: projectID,
+		EnvName:   envName,
+	})
+	if err != nil {
+		return
+	}
+	msg := OrchestraMessage{
+		Type:      "state_change",
+		Payload:   payload,
+		Timestamp: time.Now(),
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	s.hub.broadcast <- data
+}
+
+func (s *Server) handleRestart(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	service := r.URL.Query().Get("service")
+
+	project, err := s.getProjectFromPath(r)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	environment, err := s.db.GetEnvironmentByName(project.ID, name)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: fmt.Sprintf("environment %q not found", name)})
+		return
+	}
+
+	err = operations.RestartEnvironment(operations.RestartEnvironmentOptions{
+		DB:          s.db,
+		Project:     project,
+		Environment: environment,
+		Service:     service,
+		Logger:      &operations.SilentLogger{},
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	s.broadcastStateChange("env_updated", project.ID, name)
+	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }

@@ -50,6 +50,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/open", s.handleOpenInEditor)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/up", s.handleUp)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/down", s.handleDown)
+	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/restart", s.handleRestart)
 	mux.HandleFunc("DELETE /api/projects/{projectID}/environments/{name}", s.handleDestroyEnvironment)
 
 	staticFS, err := fs.Sub(staticFiles, "static")

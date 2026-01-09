@@ -844,9 +844,7 @@
             { method: "POST" }
           );
           const data = await res.json();
-          if (data.success) {
-            loadProjects();
-          } else {
+          if (!data.success) {
             showError(data.error || "Failed to start environment");
           }
         } catch (err) {
@@ -861,9 +859,7 @@
             { method: "POST" }
           );
           const data = await res.json();
-          if (data.success) {
-            loadProjects();
-          } else {
+          if (!data.success) {
             showError(data.error || "Failed to stop environment");
           }
         } catch (err) {
@@ -926,6 +922,8 @@
           const data = msg.payload;
           notifications.delete(data.id);
           renderProjects(cachedResults);
+        } else if (msg.type === "state_change") {
+          loadProjects();
         }
       }
 
@@ -1030,7 +1028,6 @@
 
       connectWebSocket();
       loadProjects();
-      setInterval(loadProjects, 5000);
       setInterval(updateLastUpdated, 1000);
     </script>
   </body>
