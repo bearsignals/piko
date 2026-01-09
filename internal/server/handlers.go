@@ -435,39 +435,6 @@ func (s *Server) handleDown(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 }
 
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-type StateChangePayload struct {
-	EventType string `json:"event_type"`
-	ProjectID int64  `json:"project_id"`
-	EnvName   string `json:"env_name"`
-}
-
-func (s *Server) broadcastStateChange(eventType string, projectID int64, envName string) {
-	payload, err := json.Marshal(StateChangePayload{
-		EventType: eventType,
-		ProjectID: projectID,
-		EnvName:   envName,
-	})
-	if err != nil {
-		return
-	}
-	msg := OrchestraMessage{
-		Type:      "state_change",
-		Payload:   payload,
-		Timestamp: time.Now(),
-	}
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
-	s.hub.broadcast <- data
-}
-
 func (s *Server) handleRestart(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	service := r.URL.Query().Get("service")
@@ -498,4 +465,38 @@ func (s *Server) handleRestart(w http.ResponseWriter, r *http.Request) {
 
 	s.broadcastStateChange("env_updated", project.ID, name)
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+}
+
+func writeJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+type StateChangePayload struct {
+	EventType string `json:"event_type"`
+	ProjectID int64  `json:"project_id"`
+	EnvName   string `json:"env_name"`
+}
+
+func (s *Server) broadcastStateChange(eventType string, projectID int64, envName string) {
+	payload, err := json.Marshal(StateChangePayload{
+		EventType: eventType,
+		ProjectID: projectID,
+		EnvName:   envName,
+	})
+	if err != nil {
+		return
+	}
+
+	msg := OrchestraMessage{
+		Type:      "state_change",
+		Payload:   payload,
+		Timestamp: time.Now(),
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	s.hub.broadcast <- data
 }
