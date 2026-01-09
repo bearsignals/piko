@@ -20,6 +20,7 @@ func init() {
 }
 
 func runRestart(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 	var service string
 	if len(args) > 1 {

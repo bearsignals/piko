@@ -19,6 +19,7 @@ func init() {
 }
 
 func runProjects(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	ctx, err := NewContextWithoutProject()
 	if err != nil {
 		return err

@@ -25,6 +25,7 @@ func init() {
 }
 
 func runCreate(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 
 	ctx, err := NewContext()

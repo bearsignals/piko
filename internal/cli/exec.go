@@ -30,6 +30,7 @@ func init() {
 }
 
 func runExec(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 	service := args[1]
 	var command []string
@@ -41,6 +42,7 @@ func runExec(cmd *cobra.Command, args []string) error {
 }
 
 func runShell(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	name := args[0]
 	service := args[1]
 

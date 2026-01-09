@@ -21,6 +21,7 @@ func init() {
 }
 
 func runPick(cmd *cobra.Command, args []string) error {
+	cmd.SilenceUsage = true
 	if _, err := exec.LookPath("fzf"); err != nil {
 		return fmt.Errorf("fzf not found (install with: brew install fzf)")
 	}
