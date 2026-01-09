@@ -333,6 +333,136 @@
             border: 1px dashed #2a2a2a;
             border-radius: 8px;
         }
+        .ws-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .ws-status.connected {
+            background: #22c55e;
+        }
+        .ws-status.disconnected {
+            background: #ef4444;
+        }
+        .notification-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #888;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .notification-btn:hover {
+            border-color: #555;
+            color: #fff;
+        }
+        .notification-badge {
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+        .notification-panel {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 400px;
+            max-height: 70vh;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            z-index: 50;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .notification-panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notification-panel-title {
+            font-weight: 500;
+        }
+        .notification-panel-close {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .notification-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        .notification-item {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .notification-item:last-child {
+            margin-bottom: 0;
+        }
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .notification-env {
+            font-weight: 500;
+            color: #60a5fa;
+        }
+        .notification-type {
+            font-size: 0.75rem;
+            color: #888;
+            background: #333;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .notification-message {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .notification-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .notification-input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #0f0f0f;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+        .notification-input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .notification-empty {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -341,6 +471,11 @@
             <span class="logo">piko</span>
         </div>
         <div class="header-right">
+            <span class="ws-status" id="ws-status" title="WebSocket disconnected"></span>
+            <button class="notification-btn" onclick="toggleNotificationPanel()" id="notification-btn">
+                <span>Notifications</span>
+                <span class="notification-badge hidden" id="notification-badge">0</span>
+            </button>
             <span class="last-updated" id="last-updated"></span>
             <button class="refresh-btn" onclick="refresh()" title="Refresh">&#8635;</button>
         </div>
@@ -353,6 +488,16 @@
             <p>Run <code>piko init</code> in a project directory to get started.</p>
         </div>
     </main>
+
+    <div id="notification-panel" class="notification-panel hidden">
+        <div class="notification-panel-header">
+            <span class="notification-panel-title">Claude Code Notifications</span>
+            <button class="notification-panel-close" onclick="toggleNotificationPanel()">&times;</button>
+        </div>
+        <div class="notification-list" id="notification-list">
+            <div class="notification-empty">No pending notifications</div>
+        </div>
+    </div>
 
     <div id="create-modal" class="modal-overlay hidden">
         <div class="modal">
@@ -666,6 +811,233 @@
             setTimeout(() => el.classList.add('hidden'), 5000);
         }
 
+        let ws = null;
+        let wsReconnectTimeout = null;
+        let notifications = new Map();
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/orchestra/ws`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                const status = document.getElementById('ws-status');
+                status.classList.add('connected');
+                status.classList.remove('disconnected');
+                status.title = 'WebSocket connected';
+            };
+
+            ws.onclose = () => {
+                const status = document.getElementById('ws-status');
+                status.classList.remove('connected');
+                status.classList.add('disconnected');
+                status.title = 'WebSocket disconnected';
+
+                wsReconnectTimeout = setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = () => {
+                ws.close();
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleWebSocketMessage(msg);
+                } catch (err) {
+                    console.error('Failed to parse WebSocket message:', err);
+                }
+            };
+        }
+
+        function handleWebSocketMessage(msg) {
+            if (msg.type === 'notification') {
+                const notification = msg.payload;
+                notifications.set(notification.id, notification);
+                updateNotificationBadge();
+                renderNotifications();
+            } else if (msg.type === 'notification_dismissed') {
+                const data = msg.payload;
+                notifications.delete(data.id);
+                updateNotificationBadge();
+                renderNotifications();
+            }
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notification-badge');
+            const count = notifications.size;
+            badge.textContent = count;
+            if (count > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function toggleNotificationPanel() {
+            const panel = document.getElementById('notification-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        function renderNotificationActions(n) {
+            if (n.notification_type === 'permission_prompt') {
+                return `
+                    <button class="btn btn-small" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+                    <button class="btn btn-small btn-secondary" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+                `;
+            }
+            return `
+                <input type="text" class="notification-input" placeholder="Type response..."
+                    onkeypress="handleNotificationKeypress(event, '${n.id}')">
+                <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
+                <button class="btn btn-small btn-secondary" onclick="dismissNotification('${n.id}')">Dismiss</button>
+            `;
+        }
+
+        function renderNotifications() {
+            const list = document.getElementById('notification-list');
+
+            if (notifications.size === 0) {
+                list.innerHTML = '<div class="notification-empty">No pending notifications</div>';
+                return;
+            }
+
+            list.innerHTML = Array.from(notifications.values()).map(n => `
+                <div class="notification-item" data-id="${n.id}" data-type="${n.notification_type}">
+                    <div class="notification-header">
+                        <span class="notification-env">${n.project_name}/${n.env_name}</span>
+                        <span class="notification-type">${n.notification_type}</span>
+                    </div>
+                    <div class="notification-message">${escapeHtml(n.message)}</div>
+                    <div class="notification-actions">
+                        ${renderNotificationActions(n)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function handleNotificationKeypress(event, id) {
+            if (event.key === 'Enter') {
+                sendNotificationResponse(id);
+            }
+        }
+
+        const sendingNotifications = new Set();
+
+        async function sendNotificationResponse(id) {
+            if (sendingNotifications.has(id)) {
+                return;
+            }
+
+            const item = document.querySelector(`.notification-item[data-id="${id}"]`);
+            if (!item) return;
+
+            const input = item.querySelector('.notification-input');
+            const response = input.value.trim();
+
+            if (!response) {
+                input.focus();
+                return;
+            }
+
+            sendingNotifications.add(id);
+            const btn = item.querySelector('.btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+            }
+            input.disabled = true;
+
+            try {
+                const res = await fetch('/api/orchestra/respond', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notification_id: id, response })
+                });
+
+                if (res.ok) {
+                    notifications.delete(id);
+                    updateNotificationBadge();
+                    renderNotifications();
+                } else {
+                    const data = await res.json();
+                    showError(data.error || 'Failed to send response');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Send';
+                    }
+                    input.disabled = false;
+                }
+            } catch (err) {
+                showError('Failed to send response');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Send';
+                }
+                input.disabled = false;
+            } finally {
+                sendingNotifications.delete(id);
+            }
+        }
+
+        async function sendKeyResponse(id, keys) {
+            if (sendingNotifications.has(id)) {
+                return;
+            }
+
+            const item = document.querySelector(`.notification-item[data-id="${id}"]`);
+            if (!item) return;
+
+            sendingNotifications.add(id);
+            const buttons = item.querySelectorAll('.btn');
+            buttons.forEach(b => b.disabled = true);
+
+            try {
+                const res = await fetch('/api/orchestra/respond', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notification_id: id, response: keys, response_type: 'keys' })
+                });
+
+                if (res.ok) {
+                    notifications.delete(id);
+                    updateNotificationBadge();
+                    renderNotifications();
+                } else {
+                    const data = await res.json();
+                    showError(data.error || 'Failed to send response');
+                    buttons.forEach(b => b.disabled = false);
+                }
+            } catch (err) {
+                showError('Failed to send response');
+                buttons.forEach(b => b.disabled = false);
+            } finally {
+                sendingNotifications.delete(id);
+            }
+        }
+
+        async function dismissNotification(id) {
+            try {
+                const res = await fetch(`/api/orchestra/notifications/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    notifications.delete(id);
+                    updateNotificationBadge();
+                    renderNotifications();
+                }
+            } catch (err) {
+                showError('Failed to dismiss notification');
+            }
+        }
+
+        connectWebSocket();
         loadProjects();
         setInterval(loadProjects, 5000);
         setInterval(updateLastUpdated, 1000);
