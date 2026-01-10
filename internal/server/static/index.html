@@ -40,10 +40,6 @@
         align-items: center;
         gap: 1rem;
       }
-      .last-updated {
-        font-size: 0.75rem;
-        color: #666;
-      }
       .refresh-btn {
         background: none;
         border: 1px solid #333;
@@ -80,7 +76,7 @@
         min-height: calc(100vh - 100px);
       }
       .project-column {
-        flex: 0 0 300px;
+        flex: 0 0 330px;
         background: #1a1a1a;
         border: 1px solid #2a2a2a;
         border-radius: 8px;
@@ -443,6 +439,30 @@
       .btn-deny:hover {
         background: #dc2626;
       }
+      .btn-loading {
+        position: relative;
+        color: transparent !important;
+        pointer-events: none;
+      }
+      .btn-loading::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        top: 50%;
+        left: 50%;
+        margin-left: -6px;
+        margin-top: -6px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: btn-spin 0.6s linear infinite;
+      }
+      @keyframes btn-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -456,7 +476,6 @@
         ></span>
       </div>
       <div class="header-right">
-        <span class="last-updated" id="last-updated"></span>
         <button class="refresh-btn" onclick="refresh()" title="Refresh">
           &#8635;
         </button>
@@ -512,7 +531,6 @@
     </div>
 
     <script>
-      let lastUpdated = null;
       let projectsData = [];
       let notifications = new Map();
       let cachedResults = [];
@@ -540,23 +558,8 @@
 
           cachedResults = await Promise.all(envPromises);
           renderProjects(cachedResults);
-          lastUpdated = new Date();
-          updateLastUpdated();
         } catch (err) {
           showError("Failed to load projects");
-        }
-      }
-
-      function updateLastUpdated() {
-        if (!lastUpdated) return;
-        const el = document.getElementById("last-updated");
-        const seconds = Math.floor((new Date() - lastUpdated) / 1000);
-        if (seconds < 5) {
-          el.textContent = "Updated just now";
-        } else if (seconds < 60) {
-          el.textContent = `Updated ${seconds}s ago`;
-        } else {
-          el.textContent = `Updated ${Math.floor(seconds / 60)}m ago`;
         }
       }
 
@@ -591,28 +594,28 @@
             const address = `localhost:${p.hostPort}`;
             if (p.url) {
               return `
-                        <div class="port-item">
-                            <span class="port-service">${p.service}</span>
-                            <a href="${p.url}" target="_blank" class="port-url">${p.url}</a>
-                            <button class="copy-btn" onclick="copyToClipboard('${p.url}', this)" title="Copy">cp</button>
-                        </div>
-                    `;
+                              <div class="port-item">
+                                  <span class="port-service">${p.service}</span>
+                                  <a href="${p.url}" target="_blank" class="port-url">${p.url}</a>
+                                  <button class="copy-btn" onclick="copyToClipboard('${p.url}', this)" title="Copy">cp</button>
+                              </div>
+                          `;
             }
             return `
-                    <div class="port-item">
-                        <span class="port-service">${p.service}</span>
-                        <span class="port-address">${address}</span>
-                        <button class="copy-btn" onclick="copyToClipboard('${address}', this)" title="Copy">cp</button>
-                    </div>
-                `;
+                          <div class="port-item">
+                              <span class="port-service">${p.service}</span>
+                              <span class="port-address">${address}</span>
+                              <button class="copy-btn" onclick="copyToClipboard('${address}', this)" title="Copy">cp</button>
+                          </div>
+                      `;
           })
           .join("");
 
         return `
-                <div class="ports-section">
-                    <div class="ports-list">${portItems}</div>
-                </div>
-            `;
+                      <div class="ports-section">
+                          <div class="ports-list">${portItems}</div>
+                      </div>
+                  `;
       }
 
       function renderProjects(results) {
@@ -646,17 +649,17 @@
             }
 
             return `
-                    <div class="project-column">
-                        <div class="project-header">
-                            <span class="project-title">${project.name}</span>
-                            <div class="project-meta">
-                                <span class="project-count">${countText}</span>
-                                <button class="btn btn-small" onclick="showCreateModal(${project.id})">+ New</button>
-                            </div>
-                        </div>
-                        <div class="env-list">${envsHtml}</div>
-                    </div>
-                `;
+                          <div class="project-column">
+                              <div class="project-header">
+                                  <span class="project-title">${project.name}</span>
+                                  <div class="project-meta">
+                                      <span class="project-count">${countText}</span>
+                                      <button class="btn btn-small" onclick="showCreateModal(${project.id})">+ New</button>
+                                  </div>
+                              </div>
+                              <div class="env-list">${envsHtml}</div>
+                          </div>
+                      `;
           })
           .join("");
 
@@ -666,16 +669,16 @@
       function renderSimpleInfo(env) {
         if (env.mode !== "simple") return "";
         return `
-                <div class="ports-section">
-                    <div class="ports-list">
-                        <div class="port-item">
-                            <span class="port-service">id</span>
-                            <span class="port-address">${env.envId}</span>
-                            <button class="copy-btn" onclick="copyToClipboard('${env.envId}', this)">cp</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+                      <div class="ports-section">
+                          <div class="ports-list">
+                              <div class="port-item">
+                                  <span class="port-service">id</span>
+                                  <span class="port-address">${env.envId}</span>
+                                  <button class="copy-btn" onclick="copyToClipboard('${env.envId}', this)">cp</button>
+                              </div>
+                          </div>
+                      </div>
+                  `;
       }
 
       function getEnvNotifications(projectName, envName) {
@@ -689,26 +692,30 @@
         let actions = "";
         if (n.notification_type === "permission_prompt") {
           actions = `
-                    <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
-                    <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
-                `;
+                          <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+                          <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+                      `;
         } else {
           actions = `
-                    <input type="text" class="notification-input" placeholder="Response..."
-                        onkeypress="handleNotificationKeypress(event, '${n.id}')" data-notification-id="${n.id}">
-                    <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
-                `;
+                          <input type="text" class="notification-input" placeholder="Response..."
+                              onkeypress="handleNotificationKeypress(event, '${n.id}')" data-notification-id="${n.id}">
+                          <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
+                      `;
         }
 
         return `
-                <div class="env-notification" data-notification-id="${n.id}">
-                    <div class="notification-label">${n.notification_type}</div>
-                    <div class="notification-message">${escapeHtml(
-                      n.message
-                    )}</div>
-                    <div class="notification-actions">${actions}</div>
-                </div>
-            `;
+                      <div class="env-notification" data-notification-id="${
+                        n.id
+                      }">
+                          <div class="notification-label">${
+                            n.notification_type
+                          }</div>
+                          <div class="notification-message">${escapeHtml(
+                            n.message
+                          )}</div>
+                          <div class="notification-actions">${actions}</div>
+                      </div>
+                  `;
       }
 
       function renderEnvironment(project, env) {
@@ -723,45 +730,47 @@
           .join("");
 
         const actionButtons = isSimple
-          ? `<button class="btn btn-small btn-secondary" onclick="openInEditor(${project.id}, '${env.name}')">Edit</button>`
+          ? `<button class="btn btn-small btn-secondary" onclick="openInEditor(${project.id}, '${env.name}', this)">Code</button>`
           : `<div class="env-header-actions">
-                    <button class="btn btn-small btn-secondary" onclick="openInEditor(${
-                      project.id
-                    }, '${env.name}')">Edit</button>
-                    ${
-                      env.status === "running"
-                        ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}')">Stop</button>`
-                        : `<button class="btn btn-small" onclick="startEnv(${project.id}, '${env.name}')">Start</button>`
-                    }
-                   </div>`;
+                          <button class="btn btn-small btn-secondary" onclick="openInEditor(${
+                            project.id
+                          }, '${env.name}', this)">Code</button>
+                          ${
+                            env.status === "running"
+                              ? `<button class="btn btn-small btn-secondary" onclick="stopEnv(${project.id}, '${env.name}', this)">Stop</button>`
+                              : `<button class="btn btn-small" onclick="startEnv(${project.id}, '${env.name}', this)">Start</button>`
+                          }
+                         </div>`;
 
         return `
-                <div class="env-card-wrapper">
-                    <div class="env-card ${
-                      hasNotification ? "has-notification" : ""
-                    }">
-                        <div class="env-header">
-                            <div class="env-name">
-                                <span class="status-dot ${env.status}"></span>
-                                ${env.name}
-                                ${
-                                  !isSimple
-                                    ? `<span class="status-text ${statusInfo.class}">${statusInfo.text}</span>`
-                                    : ""
-                                }
-                            </div>
-                            ${actionButtons}
-                        </div>
-                        ${
-                          showBranch
-                            ? `<div class="env-branch">${env.branch}</div>`
-                            : ""
-                        }
-                        ${isSimple ? "" : renderPorts(env.ports)}
-                    </div>
-                    ${notificationsHtml}
-                </div>
-            `;
+                      <div class="env-card-wrapper">
+                          <div class="env-card ${
+                            hasNotification ? "has-notification" : ""
+                          }">
+                              <div class="env-header">
+                                  <div class="env-name">
+                                      <span class="status-dot ${
+                                        env.status
+                                      }"></span>
+                                      ${env.name}
+                                      ${
+                                        !isSimple
+                                          ? `<span class="status-text ${statusInfo.class}">${statusInfo.text}</span>`
+                                          : ""
+                                      }
+                                  </div>
+                                  ${actionButtons}
+                              </div>
+                              ${
+                                showBranch
+                                  ? `<div class="env-branch">${env.branch}</div>`
+                                  : ""
+                              }
+                              ${isSimple ? "" : renderPorts(env.ports)}
+                          </div>
+                          ${notificationsHtml}
+                      </div>
+                  `;
       }
 
       async function copyToClipboard(text, btn) {
@@ -822,7 +831,11 @@
         }
       }
 
-      async function openInEditor(projectId, name) {
+      async function openInEditor(projectId, name, btn) {
+        if (btn) {
+          btn.classList.add("btn-loading");
+          btn.disabled = true;
+        }
         try {
           const res = await fetch(
             `/api/projects/${projectId}/environments/${name}/open`,
@@ -834,40 +847,65 @@
           }
         } catch (err) {
           showError("Failed to open editor");
+        } finally {
+          if (btn) {
+            btn.classList.remove("btn-loading");
+            btn.disabled = false;
+          }
         }
       }
 
-      async function startEnv(projectId, name) {
+      async function startEnv(projectId, name, btn) {
+        if (btn) {
+          btn.classList.add("btn-loading");
+          btn.disabled = true;
+        }
         try {
           const res = await fetch(
             `/api/projects/${projectId}/environments/${name}/up`,
             { method: "POST" }
           );
           const data = await res.json();
-          if (data.success) {
-            loadProjects();
-          } else {
+          if (!data.success) {
             showError(data.error || "Failed to start environment");
+            if (btn) {
+              btn.classList.remove("btn-loading");
+              btn.disabled = false;
+            }
           }
         } catch (err) {
           showError("Failed to start environment");
+          if (btn) {
+            btn.classList.remove("btn-loading");
+            btn.disabled = false;
+          }
         }
       }
 
-      async function stopEnv(projectId, name) {
+      async function stopEnv(projectId, name, btn) {
+        if (btn) {
+          btn.classList.add("btn-loading");
+          btn.disabled = true;
+        }
         try {
           const res = await fetch(
             `/api/projects/${projectId}/environments/${name}/down`,
             { method: "POST" }
           );
           const data = await res.json();
-          if (data.success) {
-            loadProjects();
-          } else {
+          if (!data.success) {
             showError(data.error || "Failed to stop environment");
+            if (btn) {
+              btn.classList.remove("btn-loading");
+              btn.disabled = false;
+            }
           }
         } catch (err) {
           showError("Failed to stop environment");
+          if (btn) {
+            btn.classList.remove("btn-loading");
+            btn.disabled = false;
+          }
         }
       }
 
@@ -926,6 +964,8 @@
           const data = msg.payload;
           notifications.delete(data.id);
           renderProjects(cachedResults);
+        } else if (msg.type === "state_change") {
+          loadProjects();
         }
       }
 
@@ -1030,8 +1070,6 @@
 
       connectWebSocket();
       loadProjects();
-      setInterval(loadProjects, 5000);
-      setInterval(updateLastUpdated, 1000);
     </script>
   </body>
 </html>

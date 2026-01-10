@@ -18,17 +18,19 @@ import (
 var staticFiles embed.FS
 
 type Server struct {
-	port   int
-	db     *state.DB
-	server *http.Server
-	hub    *Hub
+	port    int
+	db      *state.DB
+	server  *http.Server
+	hub     *Hub
+	devMode bool
 }
 
 func New(port int, db *state.DB) *Server {
 	return &Server{
-		port: port,
-		db:   db,
-		hub:  NewHub(),
+		port:    port,
+		db:      db,
+		hub:     NewHub(),
+		devMode: os.Getenv("PIKO_DEV") == "1",
 	}
 }
 
@@ -50,13 +52,19 @@ func (s *Server) Start() error {
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/open", s.handleOpenInEditor)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/up", s.handleUp)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/down", s.handleDown)
+	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/restart", s.handleRestart)
 	mux.HandleFunc("DELETE /api/projects/{projectID}/environments/{name}", s.handleDestroyEnvironment)
 
-	staticFS, err := fs.Sub(staticFiles, "static")
-	if err != nil {
-		return fmt.Errorf("failed to get static files: %w", err)
+	if s.devMode {
+		mux.Handle("GET /", http.FileServer(http.Dir("internal/server/static")))
+		fmt.Println("→ Dev mode: serving static files from disk")
+	} else {
+		staticFS, err := fs.Sub(staticFiles, "static")
+		if err != nil {
+			return fmt.Errorf("failed to get static files: %w", err)
+		}
+		mux.Handle("GET /", http.FileServer(http.FS(staticFS)))
 	}
-	mux.Handle("GET /", http.FileServer(http.FS(staticFS)))
 
 	timeoutHandler := http.TimeoutHandler(mux, 60*time.Second, "request timeout")
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

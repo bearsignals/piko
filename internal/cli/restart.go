@@ -2,9 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 
+	"github.com/gwuah/piko/internal/operations"
 	"github.com/spf13/cobra"
 )
 
@@ -39,25 +38,23 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var composeCmd *exec.Cmd
-	if service != "" {
-		composeCmd = exec.Command("docker", "compose", "-p", resolved.Environment.DockerProject, "restart", service)
-	} else {
-		composeCmd = exec.Command("docker", "compose", "-p", resolved.Environment.DockerProject, "restart")
+	api := NewAPIClient()
+	if api.IsServerRunning() {
+		if err := api.Restart(resolved.Project.ID, resolved.Environment.Name, service); err == nil {
+			if service != "" {
+				fmt.Printf("Restarted %s\n", service)
+			} else {
+				fmt.Println("Restarted containers")
+			}
+			return nil
+		}
 	}
 
-	composeCmd.Dir = resolved.ComposeDir
-	composeCmd.Stdout = os.Stdout
-	composeCmd.Stderr = os.Stderr
-
-	if err := composeCmd.Run(); err != nil {
-		return fmt.Errorf("failed to restart containers: %w", err)
-	}
-
-	if service != "" {
-		fmt.Printf("Restarted %s\n", service)
-	} else {
-		fmt.Println("Restarted containers")
-	}
-	return nil
+	return operations.RestartEnvironment(operations.RestartEnvironmentOptions{
+		DB:          resolved.Ctx.DB,
+		Project:     resolved.Project,
+		Environment: resolved.Environment,
+		Service:     service,
+		Logger:      &operations.StdoutLogger{},
+	})
 }

@@ -71,6 +71,7 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 		Name:       opts.Name,
 		BasePath:   worktreesDir,
 		BranchName: opts.Branch,
+		RepoPath:   opts.Project.RootPath,
 	}
 	wt, err := git.CreateWorktree(wtOpts)
 	if err != nil {
@@ -399,5 +400,49 @@ func DownEnvironment(opts DownEnvironmentOptions) error {
 	}
 
 	log.Info("Stopped containers")
+	return nil
+}
+
+type RestartEnvironmentOptions struct {
+	DB          *state.DB
+	Project     *state.Project
+	Environment *state.Environment
+	Service     string
+	Logger      Logger
+}
+
+func RestartEnvironment(opts RestartEnvironmentOptions) error {
+	log := opts.Logger
+	if log == nil {
+		log = &SilentLogger{}
+	}
+
+	if opts.Environment.DockerProject == "" {
+		log.Info("Simple mode environment - no containers to restart")
+		return nil
+	}
+
+	composeDir := opts.Environment.Path
+	if opts.Project.ComposeDir != "" {
+		composeDir = filepath.Join(opts.Environment.Path, opts.Project.ComposeDir)
+	}
+
+	var composeCmd *exec.Cmd
+	if opts.Service != "" {
+		composeCmd = exec.Command("docker", "compose", "-p", opts.Environment.DockerProject, "restart", opts.Service)
+	} else {
+		composeCmd = exec.Command("docker", "compose", "-p", opts.Environment.DockerProject, "restart")
+	}
+	composeCmd.Dir = composeDir
+
+	if err := composeCmd.Run(); err != nil {
+		return fmt.Errorf("failed to restart containers: %w", err)
+	}
+
+	if opts.Service != "" {
+		log.Infof("Restarted %s", opts.Service)
+	} else {
+		log.Info("Restarted containers")
+	}
 	return nil
 }
