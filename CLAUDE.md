@@ -2,6 +2,7 @@
 
 - do not add any comments to the generated code. it's not productive.
 - fix all diagnostic issues before returning.
+- do not fucking swallow any error. handle all errors.
   </strict_rules>
 
 <test_environment>

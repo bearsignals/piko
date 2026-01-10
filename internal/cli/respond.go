@@ -24,7 +24,6 @@ func init() {
 
 type ccNotification struct {
 	ID               string `json:"id"`
-	ProjectID        int64  `json:"project_id"`
 	ProjectName      string `json:"project_name"`
 	EnvName          string `json:"env_name"`
 	NotificationType string `json:"notification_type"`
