@@ -1,14 +1,25 @@
 # piko
 
-Isolated dev environments from git worktrees.
+Spin up isolated dev environments in seconds. No port conflicts. No stashing. No context-switching pain.
 
 ```
-piko create feature-auth      # worktree + containers + tmux
-piko create feature-payments  # another isolated environment
-piko attach feature-auth      # switch instantly
+piko env create feature-auth      # worktree + containers + tmux
+piko env create feature-payments  # another isolated environment
+piko env destroy feature-auth     # teardown everything
 ```
 
-Each environment gets its own branch, containers, ports, and tmux session. No conflicts.
+## Concepts
+
+**Project**: A git repository initialized with `piko init`. Contains multiple environments.
+
+**Environment**: An isolated workspace for a feature or task. Each one gets:
+
+- A git worktree (its own branch and working directory)
+- A tmux session (persistent terminal)
+- Docker containers with unique ports (if you use docker-compose)
+- A data directory for local state
+
+No conflicts between environments. Switch contexts instantly.
 
 ## Install
 
@@ -21,74 +32,42 @@ Requires: git, tmux. Docker optional.
 ## Usage
 
 ```bash
-# Initialize in your project
-cd your-project
-piko init
-
-# Create environments
-piko create my-feature           # new branch + environment
-piko create --branch main prod   # existing branch
-
-# Work
-piko attach my-feature           # attach to tmux session
-piko list                        # see all environments
-piko status my-feature           # detailed status
-
-# Lifecycle
-piko up my-feature               # start containers
-piko down my-feature             # stop containers
-piko destroy my-feature          # remove everything
+piko init                    # initialize project
+piko env create my-feature   # create environment
+piko env list                # see all environments
+piko env destroy my-feature  # remove everything
 ```
 
-## How it works
+Run `piko --help` for all commands.
 
-**Docker mode** (project has docker-compose.yml):
-- Creates git worktree at `.piko/worktrees/<name>/`
-- Starts containers with unique project name and ports
-- Creates tmux session with shell + service windows
+## Environment Variables
 
-**Simple mode** (no docker-compose.yml):
-- Creates git worktree + data directory
-- Provides `PIKO_ENV_ID` and `PIKO_DATA_DIR` for isolation
-- You derive ports: `--port $((3000 + PIKO_ENV_ID))`
+Available in your scripts and tmux sessions:
+
+```
+PIKO_ENV_NAME   # environment name
+PIKO_ENV_ID     # unique integer (for port derivation)
+PIKO_ROOT       # project root
+```
+
+## Coding Agents
+
+With first-class support for coding agents, piko provides a central UI to manage your enviroments & agents.
+
+```bash
+piko cc init    # set up hooks in current environment
+piko server     # manage all agents at localhost:19876
+```
 
 ## Configuration
 
-Optional `.piko.yml` in project root:
+Optional `.piko.yml`:
 
 ```yaml
 scripts:
-  setup: |
-    ln -s "$PIKO_ROOT/.env.local" .env.local
-    npm install
-  run: |
-    DATABASE_URL="postgres://localhost:$PIKO_DB_PORT/dev" npm run dev
-
-shells:
-  db: psql -U postgres
-  redis: redis-cli
+  setup: npm install
+  run: npm run dev
 ```
-
-## Environment variables
-
-Available in scripts and tmux sessions:
-
-```
-PIKO_ENV_NAME    # environment name
-PIKO_ENV_ID      # unique integer (for port derivation)
-PIKO_ENV_PATH    # worktree path
-PIKO_DATA_DIR    # isolated data directory
-PIKO_ROOT        # project root
-PIKO_DB_PORT     # allocated port (docker mode)
-```
-
-## Web UI
-
-```
-piko server
-```
-
-Opens dashboard at `localhost:19876` to view/manage all environments.
 
 ## License
 
