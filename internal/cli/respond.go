@@ -1,13 +1,12 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 
+	"github.com/gwuah/piko/internal/httpclient"
 	"github.com/spf13/cobra"
 )
 
@@ -19,11 +18,8 @@ var respondCmd = &cobra.Command{
 	RunE:  runRespond,
 }
 
-var respondServerURL string
-
 func init() {
 	rootCmd.AddCommand(respondCmd)
-	respondCmd.Flags().StringVar(&respondServerURL, "server", "http://localhost:19876", "Piko server URL")
 }
 
 type ccNotification struct {
@@ -82,7 +78,8 @@ func runRespond(cmd *cobra.Command, args []string) error {
 }
 
 func fetchNotifications() ([]ccNotification, error) {
-	resp, err := http.Get(respondServerURL + "/api/orchestra/notifications")
+	client := httpclient.Standard()
+	resp, err := client.Get("/api/orchestra/notifications", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -102,23 +99,17 @@ func fetchNotifications() ([]ccNotification, error) {
 }
 
 func sendResponse(notificationID, response string) error {
-	req := respondRequest{
+	client := httpclient.Standard()
+	resp, err := client.Post("/api/orchestra/respond", respondRequest{
 		NotificationID: notificationID,
 		Response:       response,
-	}
-
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(respondServerURL+"/api/orchestra/respond", "application/json", bytes.NewReader(payload))
+	}, nil)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("server returned %d: %s", resp.StatusCode, string(body))
 	}

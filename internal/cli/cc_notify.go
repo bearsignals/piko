@@ -1,15 +1,14 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/gwuah/piko/internal/httpclient"
 	"github.com/gwuah/piko/internal/tmux"
 	"github.com/spf13/cobra"
 )
@@ -21,11 +20,8 @@ var ccNotifyCmd = &cobra.Command{
 	RunE:  runCCNotify,
 }
 
-var ccNotifyServerURL string
-
 func init() {
 	ccCmd.AddCommand(ccNotifyCmd)
-	ccNotifyCmd.Flags().StringVar(&ccNotifyServerURL, "server", "http://localhost:19876", "Piko server URL")
 }
 
 type hookInput struct {
@@ -67,12 +63,8 @@ func runCCNotify(cmd *cobra.Command, args []string) error {
 		Message:          hook.Message,
 	}
 
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(ccNotifyServerURL+"/api/orchestra/notify", "application/json", bytes.NewReader(payload))
+	client := httpclient.Quick()
+	resp, err := client.Post("/api/orchestra/notify", req, nil)
 	if err != nil {
 		return nil
 	}

@@ -1,37 +1,27 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
+	"net/url"
+
+	"github.com/gwuah/piko/internal/httpclient"
 )
 
-const defaultServerURL = "http://localhost:19876"
-
 type APIClient struct {
-	baseURL string
-	client  *http.Client
+	client *httpclient.Client
 }
 
 func NewAPIClient() *APIClient {
 	return &APIClient{
-		baseURL: defaultServerURL,
-		client: &http.Client{
-			Timeout: 60 * time.Second,
-		},
+		client: httpclient.Long(),
 	}
 }
 
 func (c *APIClient) IsServerRunning() bool {
-	resp, err := c.client.Get(c.baseURL + "/api/projects")
-	if err != nil {
-		return false
-	}
-	resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
+	return c.client.IsServerRunning()
 }
 
 type apiResponse struct {
@@ -40,11 +30,10 @@ type apiResponse struct {
 }
 
 func (c *APIClient) CreateEnvironment(projectID int64, name, branch string) error {
-	body, _ := json.Marshal(map[string]string{"name": name, "branch": branch})
 	resp, err := c.client.Post(
-		fmt.Sprintf("%s/api/projects/%d/environments", c.baseURL, projectID),
-		"application/json",
-		bytes.NewReader(body),
+		fmt.Sprintf("/api/projects/%d/environments", projectID),
+		map[string]string{"name": name, "branch": branch},
+		nil,
 	)
 	if err != nil {
 		return err
@@ -54,12 +43,15 @@ func (c *APIClient) CreateEnvironment(projectID int64, name, branch string) erro
 }
 
 func (c *APIClient) DestroyEnvironment(projectID int64, name string, removeVolumes bool) error {
-	url := fmt.Sprintf("%s/api/projects/%d/environments/%s", c.baseURL, projectID, name)
+	var params url.Values
 	if !removeVolumes {
-		url += "?keep-volumes=true"
+		params = url.Values{}
+		params.Set("keep-volumes", "true")
 	}
-	req, _ := http.NewRequest("DELETE", url, nil)
-	resp, err := c.client.Do(req)
+	resp, err := c.client.Delete(
+		fmt.Sprintf("/api/projects/%d/environments/%s", projectID, name),
+		params,
+	)
 	if err != nil {
 		return err
 	}
@@ -69,8 +61,8 @@ func (c *APIClient) DestroyEnvironment(projectID int64, name string, removeVolum
 
 func (c *APIClient) Up(projectID int64, name string) error {
 	resp, err := c.client.Post(
-		fmt.Sprintf("%s/api/projects/%d/environments/%s/up", c.baseURL, projectID, name),
-		"application/json",
+		fmt.Sprintf("/api/projects/%d/environments/%s/up", projectID, name),
+		nil,
 		nil,
 	)
 	if err != nil {
@@ -82,8 +74,8 @@ func (c *APIClient) Up(projectID int64, name string) error {
 
 func (c *APIClient) Down(projectID int64, name string) error {
 	resp, err := c.client.Post(
-		fmt.Sprintf("%s/api/projects/%d/environments/%s/down", c.baseURL, projectID, name),
-		"application/json",
+		fmt.Sprintf("/api/projects/%d/environments/%s/down", projectID, name),
+		nil,
 		nil,
 	)
 	if err != nil {
@@ -94,11 +86,16 @@ func (c *APIClient) Down(projectID int64, name string) error {
 }
 
 func (c *APIClient) Restart(projectID int64, name, service string) error {
-	url := fmt.Sprintf("%s/api/projects/%d/environments/%s/restart", c.baseURL, projectID, name)
+	var params url.Values
 	if service != "" {
-		url += "?service=" + service
+		params = url.Values{}
+		params.Set("service", service)
 	}
-	resp, err := c.client.Post(url, "application/json", nil)
+	resp, err := c.client.Post(
+		fmt.Sprintf("/api/projects/%d/environments/%s/restart", projectID, name),
+		nil,
+		params,
+	)
 	if err != nil {
 		return err
 	}
