@@ -8,9 +8,9 @@ import (
 )
 
 var restartCmd = &cobra.Command{
-	Use:         "restart <name> [service]",
+	Use:         "restart [name] [service]",
 	Short:       "Restart containers for an environment",
-	Args:        cobra.RangeArgs(1, 2),
+	Args:        cobra.RangeArgs(0, 2),
 	RunE:        runRestart,
 	Annotations: Requires(ToolDocker),
 }
@@ -21,7 +21,10 @@ func init() {
 
 func runRestart(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 	var service string
 	if len(args) > 1 {
 		service = args[1]

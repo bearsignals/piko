@@ -8,10 +8,10 @@ import (
 )
 
 var switchCmd = &cobra.Command{
-	Use:         "switch <name>",
+	Use:         "switch [name]",
 	Short:       "Switch to an environment's tmux session",
 	Long:        "Switch to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
-	Args:        cobra.ExactArgs(1),
+	Args:        cobra.RangeArgs(0, 1),
 	RunE:        runSwitch,
 	Annotations: Requires(ToolTmux),
 }
@@ -22,7 +22,10 @@ func init() {
 
 func runSwitch(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 
 	if !tmux.IsInsideTmux() {
 		return fmt.Errorf("not inside tmux (use 'piko env attach %s' instead)", name)

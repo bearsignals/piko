@@ -19,12 +19,14 @@ const (
 	ToolGit    = "git"
 	ToolDocker = "docker"
 	ToolTmux   = "tmux"
+	ToolFzf    = "fzf"
 )
 
 var toolNames = map[string]string{
 	ToolGit:    "Git",
 	ToolDocker: "Docker",
 	ToolTmux:   "tmux",
+	ToolFzf:    "fzf",
 }
 
 var doctorCmd = &cobra.Command{
@@ -48,6 +50,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		{ToolGit, true},
 		{ToolDocker, false},
 		{ToolTmux, true},
+		{ToolFzf, false},
 	}
 
 	var missingRequired bool
@@ -208,6 +211,8 @@ func CheckTool(binary string) (bool, string) {
 		versionArg = "--version"
 	case ToolTmux:
 		versionArg = "-V"
+	case ToolFzf:
+		versionArg = "--version"
 	default:
 		return true, path
 	}

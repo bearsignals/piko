@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -92,4 +94,67 @@ func RequireDockerGlobally(name string) (*ResolvedEnvironment, error) {
 	}
 
 	return resolved, nil
+}
+
+func GetEnvNameOrSelect(args []string) (string, error) {
+	if len(args) > 0 {
+		return args[0], nil
+	}
+	return SelectEnvironment()
+}
+
+func SelectEnvironment() (string, error) {
+	if _, err := exec.LookPath("fzf"); err != nil {
+		return "", fmt.Errorf("fzf not found (install with: brew install fzf)")
+	}
+
+	ctx, err := NewContextWithoutProject()
+	if err != nil {
+		return "", err
+	}
+	defer ctx.Close()
+
+	projects, err := ctx.DB.ListProjects()
+	if err != nil {
+		return "", fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	if len(projects) == 0 {
+		return "", fmt.Errorf("no projects registered (run 'piko init' in a project first)")
+	}
+
+	var envNames []string
+	for _, project := range projects {
+		environments, err := ctx.DB.ListEnvironmentsByProject(project.ID)
+		if err != nil {
+			continue
+		}
+		for _, env := range environments {
+			envNames = append(envNames, fmt.Sprintf("%s/%s", project.Name, env.Name))
+		}
+	}
+
+	if len(envNames) == 0 {
+		return "", fmt.Errorf("no environments found (create one with: piko create <name>)")
+	}
+
+	if len(envNames) == 1 {
+		return envNames[0], nil
+	}
+
+	fzf := exec.Command("fzf", "--height=~10", "--layout=reverse-list", "--no-info", "--no-separator", "--pointer=>", "--prompt=env> ")
+	fzf.Stdin = strings.NewReader(strings.Join(envNames, "\n"))
+	fzf.Stderr = os.Stderr
+
+	output, err := fzf.Output()
+	if err != nil {
+		return "", fmt.Errorf("cancelled")
+	}
+
+	selected := strings.TrimSpace(string(output))
+	if selected == "" {
+		return "", fmt.Errorf("cancelled")
+	}
+
+	return selected, nil
 }

@@ -6,10 +6,10 @@ import (
 )
 
 var destroyCmd = &cobra.Command{
-	Use:         "destroy <name>",
+	Use:         "destroy [name]",
 	Short:       "Destroy an environment completely",
-	Args:        cobra.ExactArgs(1),
-	RunE:        runDestroy,
+	Args:        cobra.RangeArgs(0, 1),
+	RunE:        runDestroyWithSelection,
 	Annotations: Requires(ToolGit, ToolTmux),
 }
 
@@ -20,10 +20,16 @@ func init() {
 	destroyCmd.Flags().BoolVar(&keepVolumes, "keep-volumes", false, "Keep Docker volumes instead of removing them")
 }
 
-func runDestroy(cmd *cobra.Command, args []string) error {
+func runDestroyWithSelection(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
+	return runDestroy(name)
+}
 
+func runDestroy(name string) error {
 	resolved, err := ResolveEnvironmentGlobally(name)
 	if err != nil {
 		return err
