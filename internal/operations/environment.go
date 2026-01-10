@@ -81,7 +81,7 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 
 	dataDir := filepath.Join(opts.Project.RootPath, ".piko", "data", opts.Name)
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		git.RemoveWorktree(wt.Path)
+		git.RemoveWorktree(opts.Project.RootPath, wt.Path)
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 	log.Infof("Created data directory at %s", dataDir)
@@ -90,7 +90,7 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 		log.Infof("Removing data directory %s", dataDir)
 		os.RemoveAll(dataDir)
 		log.Infof("Removing worktree %s", wt.Path)
-		git.RemoveWorktree(wt.Path)
+		git.RemoveWorktree(opts.Project.RootPath, wt.Path)
 	}
 
 	composeDir := wt.Path
@@ -284,7 +284,7 @@ func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
 		}
 	}
 
-	if err := git.RemoveWorktree(opts.Environment.Path); err != nil {
+	if err := git.RemoveWorktree(opts.Project.RootPath, opts.Environment.Path); err != nil {
 		log.Warnf("failed to remove worktree: %v", err)
 	} else {
 		log.Info("Removed worktree")

@@ -54,15 +54,17 @@ func CreateWorktree(opts WorktreeOptions) (*WorktreeResult, error) {
 	return &WorktreeResult{Path: worktreePath, Branch: opts.Name}, nil
 }
 
-func BranchExists(branchName string) (bool, error) {
+func BranchExists(repoPath, branchName string) (bool, error) {
 	err := run.Command("git", "rev-parse", "--verify", branchName).
+		Dir(repoPath).
 		Timeout(5 * time.Second).
 		Run()
 	return err == nil, nil
 }
 
-func RemoveWorktree(path string) error {
-	output, err := run.Command("git", "worktree", "remove", path, "--force").
+func RemoveWorktree(repoPath, worktreePath string) error {
+	output, err := run.Command("git", "worktree", "remove", worktreePath, "--force").
+		Dir(repoPath).
 		Timeout(gitTimeout).
 		CombinedOutput()
 	if err != nil {
