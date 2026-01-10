@@ -361,8 +361,9 @@ func UpEnvironment(opts UpEnvironmentOptions) error {
 		"up", "-d")
 	composeCmd.Dir = composeDir
 
-	if err := composeCmd.Run(); err != nil {
-		return fmt.Errorf("failed to start containers: %w", err)
+	output, err := composeCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to start containers: %s", string(output))
 	}
 
 	log.Infof("Started containers (%s)", opts.Environment.DockerProject)
@@ -395,8 +396,9 @@ func DownEnvironment(opts DownEnvironmentOptions) error {
 	composeCmd := exec.Command("docker", "compose", "-p", opts.Environment.DockerProject, "down")
 	composeCmd.Dir = composeDir
 
-	if err := composeCmd.Run(); err != nil {
-		return fmt.Errorf("failed to stop containers: %w", err)
+	output, err := composeCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to stop containers: %s", string(output))
 	}
 
 	log.Info("Stopped containers")
@@ -435,8 +437,9 @@ func RestartEnvironment(opts RestartEnvironmentOptions) error {
 	}
 	composeCmd.Dir = composeDir
 
-	if err := composeCmd.Run(); err != nil {
-		return fmt.Errorf("failed to restart containers: %w", err)
+	output, err := composeCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to restart containers: %s", string(output))
 	}
 
 	if opts.Service != "" {

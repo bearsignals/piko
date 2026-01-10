@@ -55,8 +55,8 @@ func (c *APIClient) CreateEnvironment(projectID int64, name, branch string) erro
 
 func (c *APIClient) DestroyEnvironment(projectID int64, name string, removeVolumes bool) error {
 	url := fmt.Sprintf("%s/api/projects/%d/environments/%s", c.baseURL, projectID, name)
-	if removeVolumes {
-		url += "?volumes=true"
+	if !removeVolumes {
+		url += "?keep-volumes=true"
 	}
 	req, _ := http.NewRequest("DELETE", url, nil)
 	resp, err := c.client.Do(req)
