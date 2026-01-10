@@ -57,15 +57,17 @@ type RespondRequest struct {
 	NotificationID string `json:"notification_id"`
 	Response       string `json:"response"`
 	ResponseType   string `json:"response_type"`
+	OptionNum      int    `json:"option_num,omitempty"`
 }
 
 type Hub struct {
-	clients       map[*Client]bool
-	broadcast     chan []byte
-	register      chan *Client
-	unregister    chan *Client
-	notifications map[string]*CCNotification
-	mu            sync.RWMutex
+	clients                map[*Client]bool
+	broadcast              chan []byte
+	register               chan *Client
+	unregister             chan *Client
+	notifications          map[string]*CCNotification
+	notificationsByTarget  map[string]string
+	mu                     sync.RWMutex
 }
 
 type Client struct {
@@ -76,11 +78,12 @@ type Client struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		clients:       make(map[*Client]bool),
-		broadcast:     make(chan []byte, 256),
-		register:      make(chan *Client),
-		unregister:    make(chan *Client),
-		notifications: make(map[string]*CCNotification),
+		clients:               make(map[*Client]bool),
+		broadcast:             make(chan []byte, 256),
+		register:              make(chan *Client),
+		unregister:            make(chan *Client),
+		notifications:         make(map[string]*CCNotification),
+		notificationsByTarget: make(map[string]string),
 	}
 }
 
@@ -110,6 +113,9 @@ func (h *Hub) Run() {
 func (h *Hub) AddNotification(n *CCNotification) {
 	h.mu.Lock()
 	h.notifications[n.ID] = n
+	if n.TmuxTarget != "" {
+		h.notificationsByTarget[n.TmuxTarget] = n.ID
+	}
 	h.mu.Unlock()
 
 	payload, err := json.Marshal(n)
@@ -135,6 +141,9 @@ func (h *Hub) RemoveNotification(id string) *CCNotification {
 	n, exists := h.notifications[id]
 	if exists {
 		delete(h.notifications, id)
+		if n.TmuxTarget != "" {
+			delete(h.notificationsByTarget, n.TmuxTarget)
+		}
 	}
 	h.mu.Unlock()
 
@@ -158,6 +167,15 @@ func (h *Hub) RemoveNotification(id string) *CCNotification {
 	}
 
 	return n
+}
+
+func (h *Hub) GetNotificationByTarget(target string) *CCNotification {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if id, ok := h.notificationsByTarget[target]; ok {
+		return h.notifications[id]
+	}
+	return nil
 }
 
 func (h *Hub) GetNotification(id string) *CCNotification {
@@ -270,12 +288,7 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, SuccessResponse{Success: false, Error: "invalid request body"})
 		return
 	}
-	log.Printf("[notify] received: project=%s env=%s pid=%d tmux_pane=%q (decode took %v)", req.ProjectName, req.EnvName, req.ParentPID, req.TmuxTarget, time.Since(start))
-
-	if req.NotificationType == "permission_prompt" {
-		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
-		return
-	}
+	log.Printf("[notify] received: project=%s env=%s pid=%d tmux_pane=%q type=%s tool=%s (decode took %v)", req.ProjectName, req.EnvName, req.ParentPID, req.TmuxTarget, req.NotificationType, req.ToolName, time.Since(start))
 
 	tmuxTarget := req.TmuxTarget
 	if tmuxTarget == "" && req.ParentPID > 0 {
@@ -289,6 +302,19 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 	if tmuxTarget == "" {
 		tmuxTarget = req.TmuxSession
 		log.Printf("[notify] fallback to session: %s", tmuxTarget)
+	}
+
+	existing := s.hub.GetNotificationByTarget(tmuxTarget)
+	if existing != nil {
+		if req.NotificationType == "permission_prompt" && existing.ToolName != "" {
+			log.Printf("[notify] skipping permission_prompt, already have richer notification for target %s", tmuxTarget)
+			writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+			return
+		}
+		if req.ToolName != "" && existing.ToolName == "" {
+			log.Printf("[notify] replacing generic notification with richer one for target %s", tmuxTarget)
+			s.hub.RemoveNotification(existing.ID)
+		}
 	}
 
 	notification := &CCNotification{
@@ -328,10 +354,20 @@ func (s *Server) handleOrchestraRespond(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var err error
-	if req.ResponseType == "keys" {
+	switch req.ResponseType {
+	case "keys":
 		err = tmux.SendKeys(notification.TmuxTarget, req.Response)
-	} else if req.Response != "" {
-		err = tmux.SendText(notification.TmuxTarget, req.Response)
+	case "option":
+		err = tmux.SendKeys(notification.TmuxTarget, req.Response)
+	case "custom":
+		err = tmux.SendKeys(notification.TmuxTarget, fmt.Sprintf("%d", req.OptionNum))
+		if err == nil && req.Response != "" {
+			err = tmux.SendText(notification.TmuxTarget, req.Response)
+		}
+	default:
+		if req.Response != "" {
+			err = tmux.SendText(notification.TmuxTarget, req.Response)
+		}
 	}
 
 	if err != nil {

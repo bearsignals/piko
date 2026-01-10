@@ -1411,7 +1411,7 @@
             body: JSON.stringify({
               notification_id: id,
               response: String(optionNum),
-              response_type: "keys",
+              response_type: "option",
             }),
           });
 
@@ -1473,8 +1473,9 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               notification_id: id,
-              response: String(otherOptionNum) + "\n" + response,
-              response_type: "keys",
+              response: response,
+              response_type: "custom",
+              option_num: otherOptionNum,
             }),
           });
 
