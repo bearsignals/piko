@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/gwuah/piko/internal/process"
 	"github.com/gwuah/piko/internal/tmux"
 )
 
@@ -29,7 +30,6 @@ type OrchestraMessage struct {
 
 type CCNotification struct {
 	ID               string    `json:"id"`
-	ProjectID        int64     `json:"project_id"`
 	ProjectName      string    `json:"project_name"`
 	EnvName          string    `json:"env_name"`
 	TmuxSession      string    `json:"tmux_session"`
@@ -40,11 +40,11 @@ type CCNotification struct {
 }
 
 type NotifyRequest struct {
-	ProjectID        int64  `json:"project_id"`
 	ProjectName      string `json:"project_name"`
 	EnvName          string `json:"env_name"`
 	TmuxSession      string `json:"tmux_session"`
 	TmuxTarget       string `json:"tmux_target"`
+	ParentPID        int    `json:"parent_pid"`
 	NotificationType string `json:"notification_type"`
 	Message          string `json:"message"`
 }
@@ -260,20 +260,30 @@ func (s *Server) handleOrchestraWS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req NotifyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, SuccessResponse{Success: false, Error: "invalid request body"})
 		return
 	}
+	log.Printf("[notify] received: project=%s env=%s pid=%d tmux_pane=%q (decode took %v)", req.ProjectName, req.EnvName, req.ParentPID, req.TmuxTarget, time.Since(start))
 
 	tmuxTarget := req.TmuxTarget
+	if tmuxTarget == "" && req.ParentPID > 0 {
+		paneStart := time.Now()
+		paneID, err := process.FindTmuxPane(req.ParentPID)
+		log.Printf("[notify] pane lookup: id=%q err=%v (took %v)", paneID, err, time.Since(paneStart))
+		if err == nil && paneID != "" {
+			tmuxTarget = paneID
+		}
+	}
 	if tmuxTarget == "" {
 		tmuxTarget = req.TmuxSession
+		log.Printf("[notify] fallback to session: %s", tmuxTarget)
 	}
 
 	notification := &CCNotification{
 		ID:               uuid.New().String(),
-		ProjectID:        req.ProjectID,
 		ProjectName:      req.ProjectName,
 		EnvName:          req.EnvName,
 		TmuxSession:      req.TmuxSession,
@@ -283,9 +293,14 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:        time.Now(),
 	}
 
+	addStart := time.Now()
 	s.hub.AddNotification(notification)
+	log.Printf("[notify] broadcast complete (took %v, total %v)", time.Since(addStart), time.Since(start))
 
+	writeStart := time.Now()
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+	log.Printf("[notify] write complete (took %v, total %v)", time.Since(writeStart), time.Since(start))
+
 }
 
 func (s *Server) handleOrchestraRespond(w http.ResponseWriter, r *http.Request) {

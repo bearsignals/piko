@@ -57,18 +57,41 @@ func runCCInit(cmd *cobra.Command, args []string) error {
 		settings.Hooks = make(map[string][]hookMatcher)
 	}
 
-	settings.Hooks["Notification"] = []hookMatcher{
+	settings.Hooks["PermissionRequest"] = []hookMatcher{
 		{
-			Matcher: "permission_prompt|idle_prompt",
 			Hooks: []hookConfig{
 				{
 					Type:    "command",
 					Command: "piko cc notify",
-					Timeout: 5,
+					Timeout: 10,
 				},
 			},
 		},
 	}
+
+	settings.Hooks["Notification"] = []hookMatcher{
+		{
+			Hooks: []hookConfig{
+				{
+					Type:    "command",
+					Command: "piko cc notify",
+					Timeout: 10,
+				},
+			},
+		},
+	}
+
+	// settings.Hooks["Stop"] = []hookMatcher{
+	// 	{
+	// 		Hooks: []hookConfig{
+	// 			{
+	// 				Type:    "command",
+	// 				Command: "piko cc notify",
+	// 				Timeout: 10,
+	// 			},
+	// 		},
+	// 	},
+	// }
 
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
@@ -82,7 +105,7 @@ func runCCInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Created %s with Orchestra hooks\n", settingsPath)
 	fmt.Println()
 	fmt.Println("Claude Code will now send notifications to Piko when it needs input.")
-	fmt.Println("Make sure the Piko server is running: piko server")
+	fmt.Println("Make sure the Piko server is running: piko serve")
 
 	return nil
 }
