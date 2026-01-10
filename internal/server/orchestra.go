@@ -61,13 +61,13 @@ type RespondRequest struct {
 }
 
 type Hub struct {
-	clients                map[*Client]bool
-	broadcast              chan []byte
-	register               chan *Client
-	unregister             chan *Client
-	notifications          map[string]*CCNotification
-	notificationsByTarget  map[string]string
-	mu                     sync.RWMutex
+	clients               map[*Client]bool
+	broadcast             chan []byte
+	register              chan *Client
+	unregister            chan *Client
+	notifications         map[string]*CCNotification
+	notificationsByTarget map[string]string
+	mu                    sync.RWMutex
 }
 
 type Client struct {
@@ -304,6 +304,16 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[notify] fallback to session: %s", tmuxTarget)
 	}
 
+	if req.NotificationType == "PostToolUse" {
+		existing := s.hub.GetNotificationByTarget(tmuxTarget)
+		if existing != nil {
+			log.Printf("[notify] PostToolUse dismissing notification for target %s", tmuxTarget)
+			s.hub.RemoveNotification(existing.ID)
+		}
+		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+		return
+	}
+
 	existing := s.hub.GetNotificationByTarget(tmuxTarget)
 	if existing != nil {
 		if req.NotificationType == "permission_prompt" && existing.ToolName != "" {
@@ -337,7 +347,6 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 	writeStart := time.Now()
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
 	log.Printf("[notify] write complete (took %v, total %v)", time.Since(writeStart), time.Since(start))
-
 }
 
 func (s *Server) handleOrchestraRespond(w http.ResponseWriter, r *http.Request) {

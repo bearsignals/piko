@@ -81,17 +81,17 @@ func runCCInit(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	// settings.Hooks["Stop"] = []hookMatcher{
-	// 	{
-	// 		Hooks: []hookConfig{
-	// 			{
-	// 				Type:    "command",
-	// 				Command: "piko cc notify",
-	// 				Timeout: 10,
-	// 			},
-	// 		},
-	// 	},
-	// }
+	settings.Hooks["PostToolUse"] = []hookMatcher{
+		{
+			Hooks: []hookConfig{
+				{
+					Type:    "command",
+					Command: "piko cc notify",
+					Timeout: 10,
+				},
+			},
+		},
+	}
 
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
