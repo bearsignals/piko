@@ -6,7 +6,7 @@
     <title>Piko | Isolated Dev Environments</title>
     <meta
       name="description"
-      content="CLI tool for isolated development environments using Git worktrees, tmux, and Docker."
+      content="Work on multiple features simultaneously. No port conflicts, no stashing, instant context switching."
     />
     <style>
       :root {
@@ -59,13 +59,13 @@
         max-width: 700px;
         margin: 0 auto;
         padding: 2rem;
-        padding-top: calc(50vh - 120px);
+        padding-top: 15vh;
         z-index: 1;
         position: relative;
       }
 
       header {
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
         gap: 1rem;
@@ -87,28 +87,57 @@
       }
 
       .tagline {
-        font-size: 1.5rem;
-        color: var(--text-muted);
-        margin-bottom: 2.5rem;
-        font-weight: 300;
-        line-height: 1.4;
+        font-size: 1.6rem;
+        color: var(--text-main);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        line-height: 1.3;
       }
 
-      .problem {
+      .subtitle {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+      }
+
+      .install {
         font-family: var(--font-mono);
         font-size: 0.9rem;
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid var(--border);
         border-radius: 4px;
-        padding: 1.25rem 1.5rem;
+        padding: 1rem 1.25rem;
         margin-bottom: 2.5rem;
-        color: var(--text-muted);
-        line-height: 1.7;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
       }
 
-      .problem .quote {
+      .install .prompt {
+        color: var(--text-muted);
+        user-select: none;
+      }
+
+      .install .cmd {
         color: var(--text-main);
-        font-style: italic;
+        flex: 1;
+      }
+
+      .install .copy-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+      }
+
+      .install .copy-btn:hover {
+        border-color: var(--text-main);
+        color: var(--text-main);
       }
 
       section {
@@ -123,22 +152,6 @@
         letter-spacing: 0.15em;
         margin-bottom: 1rem;
         font-family: var(--font-mono);
-      }
-
-      .philosophy {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-      }
-
-      .philosophy-item {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-      }
-
-      .philosophy-item strong {
-        color: var(--text-main);
-        font-weight: 500;
       }
 
       .workflow {
@@ -174,14 +187,37 @@
         margin-left: auto;
       }
 
-      .primitives {
-        font-family: var(--font-mono);
-        font-size: 0.9rem;
-        color: var(--text-muted);
+      .benefits {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
       }
 
-      .primitives span {
+      .benefit {
+        font-size: 0.9rem;
+      }
+
+      .benefit strong {
         color: var(--text-main);
+        display: block;
+        margin-bottom: 0.25rem;
+      }
+
+      .benefit p {
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      .how-it-works {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .how-it-works code {
+        font-family: var(--font-mono);
+        color: var(--text-main);
+        font-size: 0.85rem;
       }
 
       .links {
@@ -253,7 +289,8 @@
 
       header,
       .tagline,
-      .problem,
+      .subtitle,
+      .install,
       section,
       .links {
         animation: fadeUp 0.8s ease-out forwards;
@@ -265,28 +302,34 @@
       .tagline {
         animation-delay: 0.15s;
       }
-      .problem {
-        animation-delay: 0.2s;
+      .subtitle {
+        animation-delay: 0.18s;
+      }
+      .install {
+        animation-delay: 0.22s;
       }
       section:nth-of-type(1) {
-        animation-delay: 0.25s;
+        animation-delay: 0.26s;
       }
       section:nth-of-type(2) {
-        animation-delay: 0.3s;
+        animation-delay: 0.30s;
       }
       section:nth-of-type(3) {
-        animation-delay: 0.35s;
+        animation-delay: 0.34s;
       }
       .links {
-        animation-delay: 0.4s;
+        animation-delay: 0.38s;
       }
 
       @media (max-width: 600px) {
-        .philosophy {
+        .benefits {
           grid-template-columns: 1fr;
         }
         .workflow .comment {
           display: none;
+        }
+        .container {
+          padding-top: 10vh;
         }
       }
     </style>
@@ -301,83 +344,75 @@
       </header>
 
       <p class="tagline">
-        Isolated development environments using Git worktrees, tmux, and Docker.
+        Work on multiple features at once.
+      </p>
+      <p class="subtitle">
+        Isolated dev environments with their own branches, containers, and ports.
       </p>
 
-      <div class="problem">
-        <span class="quote"
-          >"I want to work on feature-auth and feature-payments
-          simultaneously,<br />each with their own database state, without
-          conflicts."</span
-        >
+      <div class="install">
+        <span class="prompt">$</span>
+        <span class="cmd">go install github.com/bearsignals/piko@latest</span>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('go install github.com/bearsignals/piko@latest')">copy</button>
       </div>
 
       <section>
-        <h2>Philosophy</h2>
-        <div class="philosophy">
-          <div class="philosophy-item">
-            <strong>Primitives over prescriptions.</strong> Provides building
-            blocks, lets you compose.
-          </div>
-          <div class="philosophy-item">
-            <strong>Composable.</strong> Leverages Git, tmux, Docker. No
-            lock-in.
-          </div>
-          <div class="philosophy-item">
-            <strong>Zero config by default.</strong> Just works, configure only
-            if needed.
-          </div>
-          <div class="philosophy-item">
-            <strong>Graceful degradation.</strong> Works with or without Docker.
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2>Workflow</h2>
+        <h2>Usage</h2>
         <div class="workflow">
           <div class="line">
             <span class="prompt">$</span>
             <span class="cmd">piko init</span>
-            <span class="comment"># initialize project</span>
           </div>
           <div class="line">
             <span class="prompt">$</span>
             <span class="cmd"
               >piko create <span class="arg">feature-auth</span></span
             >
-            <span class="comment"># worktree + containers + tmux</span>
           </div>
           <div class="line">
             <span class="prompt">$</span>
             <span class="cmd"
               >piko attach <span class="arg">feature-auth</span></span
             >
-            <span class="comment"># jump into the environment</span>
-          </div>
-          <div class="line">
-            <span class="prompt">$</span>
-            <span class="cmd"
-              >piko destroy <span class="arg">feature-auth</span></span
-            >
-            <span class="comment"># tear it all down</span>
           </div>
         </div>
       </section>
 
       <section>
-        <h2>What it provides</h2>
-        <p class="primitives">
-          <span>worktrees</span> + <span>tmux</span> + <span>env vars</span> +
-          <span>data dirs</span>
+        <h2>What you get</h2>
+        <div class="benefits">
+          <div class="benefit">
+            <strong>Isolated branches</strong>
+            <p>Git worktrees at <code>.piko/worktrees/&lt;name&gt;</code></p>
+          </div>
+          <div class="benefit">
+            <strong>Isolated containers</strong>
+            <p>Each environment gets its own Docker network and ports</p>
+          </div>
+          <div class="benefit">
+            <strong>Persistent sessions</strong>
+            <p>tmux sessions you can attach/detach from</p>
+          </div>
+          <div class="benefit">
+            <strong>Isolated data</strong>
+            <p>Separate directories for databases and caches</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it works</h2>
+        <p class="how-it-works">
+          <code>piko create</code> sets up a Git worktree, starts Docker containers on unique ports,
+          and opens a tmux session. <code>piko attach</code> reconnects you.
+          <code>piko destroy</code> tears everything down.
+          Works with or without Docker.
         </p>
       </section>
 
       <div class="links">
-        <a href="https://github.com/bearsignals/piko" class="btn primary"
-          >GitHub</a
-        >
-        <a href="docs.html" class="btn">Docs</a>
+        <a href="docs.html" class="btn primary">Docs</a>
+        <a href="https://github.com/bearsignals/piko" class="btn">GitHub</a>
       </div>
     </div>
 

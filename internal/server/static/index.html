@@ -383,6 +383,39 @@
       .ws-status.disconnected {
         background: #ef4444;
       }
+      .orphan-notifications {
+        background: #1a1a1a;
+        border: 1px solid #991b1b;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      .orphan-header {
+        color: #f87171;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .orphan-notification {
+        background: #2a1a1a;
+        border: 1px solid #7f1d1d;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+      }
+      .orphan-notification:last-child {
+        margin-bottom: 0;
+      }
+      .orphan-meta {
+        color: #888;
+        font-size: 0.7rem;
+        margin-bottom: 0.5rem;
+        font-family: monospace;
+      }
       .env-notification {
         background: #1e1b4b;
         border: 1px solid #3730a3;
@@ -620,6 +653,7 @@
     </header>
     <main>
       <div id="error" class="error hidden"></div>
+      <div id="orphan-container"></div>
       <div id="projects-container"></div>
       <div id="empty-state" class="empty-state hidden">
         <p>No projects registered yet.</p>
@@ -695,6 +729,7 @@
 
           cachedResults = await Promise.all(envPromises);
           renderProjects(cachedResults);
+          renderOrphanNotifications();
         } catch (err) {
           showError("Failed to load projects");
         }
@@ -823,6 +858,42 @@
         return Array.from(notifications.values()).filter(
           (n) => `${n.project_name}/${n.env_name}` === key
         );
+      }
+
+      function getOrphanNotifications() {
+        const matchedEnvs = new Set();
+        for (const { project, environments } of cachedResults) {
+          for (const env of environments) {
+            matchedEnvs.add(`${project.name}/${env.name}`);
+          }
+        }
+        return Array.from(notifications.values()).filter(
+          (n) => !matchedEnvs.has(`${n.project_name}/${n.env_name}`)
+        );
+      }
+
+      function renderOrphanNotifications() {
+        const container = document.getElementById("orphan-container");
+        const orphans = getOrphanNotifications();
+
+        if (orphans.length === 0) {
+          container.innerHTML = "";
+          return;
+        }
+
+        const notificationsHtml = orphans.map((n) => `
+          <div class="orphan-notification">
+            <div class="orphan-meta">project: ${escapeHtml(n.project_name || "(empty)")} | env: ${escapeHtml(n.env_name || "(empty)")} | target: ${escapeHtml(n.tmux_target || "(none)")}</div>
+            ${renderNotification(n)}
+          </div>
+        `).join("");
+
+        container.innerHTML = `
+          <div class="orphan-notifications">
+            <div class="orphan-header">Unmatched Notifications (${orphans.length})</div>
+            ${notificationsHtml}
+          </div>
+        `;
       }
 
       function renderNotification(n) {
@@ -1287,14 +1358,19 @@
       }
 
       function handleWebSocketMessage(msg) {
+        console.log("[ws] received:", msg.type, msg.payload);
         if (msg.type === "notification") {
           const notification = msg.payload;
           notifications.set(notification.id, notification);
           renderProjects(cachedResults);
+          renderOrphanNotifications();
+          renderOrphanNotifications();
         } else if (msg.type === "notification_dismissed") {
           const data = msg.payload;
           notifications.delete(data.id);
           renderProjects(cachedResults);
+          renderOrphanNotifications();
+          renderOrphanNotifications();
         } else if (msg.type === "state_change") {
           loadProjects();
         }
@@ -1341,6 +1417,7 @@
           if (res.ok) {
             notifications.delete(id);
             renderProjects(cachedResults);
+          renderOrphanNotifications();
           } else {
             const data = await res.json();
             showError(data.error || "Failed to send response");
@@ -1380,6 +1457,7 @@
           if (res.ok) {
             notifications.delete(id);
             renderProjects(cachedResults);
+          renderOrphanNotifications();
           } else {
             const data = await res.json();
             showError(data.error || "Failed to send response");
@@ -1427,6 +1505,7 @@
           if (res.ok) {
             notifications.delete(id);
             renderProjects(cachedResults);
+          renderOrphanNotifications();
           } else {
             const data = await res.json();
             showError(data.error || "Failed to send response");
@@ -1491,6 +1570,7 @@
           if (res.ok) {
             notifications.delete(id);
             renderProjects(cachedResults);
+          renderOrphanNotifications();
           } else {
             const data = await res.json();
             showError(data.error || "Failed to send response");
@@ -1553,6 +1633,7 @@
           if (res.ok) {
             notifications.delete(id);
             renderProjects(cachedResults);
+          renderOrphanNotifications();
           } else {
             const data = await res.json();
             showError(data.error || "Failed to send response");
@@ -1583,6 +1664,7 @@
           if (res.ok) {
             notifications.delete(id);
             renderProjects(cachedResults);
+          renderOrphanNotifications();
           } else {
             const data = await res.json();
             showError(data.error || "Failed to dismiss notification");
