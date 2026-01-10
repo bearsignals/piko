@@ -189,23 +189,28 @@
 
       .benefits {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.25rem;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
       }
 
       .benefit {
         font-size: 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        background: rgba(255, 255, 255, 0.02);
       }
 
       .benefit strong {
         color: var(--text-main);
         display: block;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.35rem;
       }
 
       .benefit p {
         color: var(--text-muted);
         margin: 0;
+        font-size: 0.8rem;
       }
 
       .how-it-works {
@@ -312,7 +317,7 @@
         animation-delay: 0.26s;
       }
       section:nth-of-type(2) {
-        animation-delay: 0.30s;
+        animation-delay: 0.3s;
       }
       section:nth-of-type(3) {
         animation-delay: 0.34s;
@@ -343,17 +348,22 @@
         <h1>piko</h1>
       </header>
 
-      <p class="tagline">
-        Work on multiple features at once.
-      </p>
+      <p class="tagline">One engineer, multiple projects, multiple agents.</p>
       <p class="subtitle">
-        Isolated dev environments with their own branches, containers, and ports.
+        Work on three features at once. Switch between them in a keystroke. Piko
+        gives each feature an isolated environment — its own <span style="color: var(--text-main)">branch</span>, its own
+        <span style="color: var(--text-main)">terminal session</span>, its own <span style="color: var(--text-main)">containers</span>.
       </p>
 
       <div class="install">
         <span class="prompt">$</span>
         <span class="cmd">go install github.com/bearsignals/piko@latest</span>
-        <button class="copy-btn" onclick="navigator.clipboard.writeText('go install github.com/bearsignals/piko@latest')">copy</button>
+        <button
+          class="copy-btn"
+          onclick="navigator.clipboard.writeText('go install github.com/bearsignals/piko@latest')"
+        >
+          copy
+        </button>
       </div>
 
       <section>
@@ -372,42 +382,28 @@
           <div class="line">
             <span class="prompt">$</span>
             <span class="cmd"
-              >piko attach <span class="arg">feature-auth</span></span
+              >piko destroy <span class="arg">feature-auth</span></span
             >
           </div>
         </div>
       </section>
 
       <section>
-        <h2>What you get</h2>
+        <h2>Goodies</h2>
         <div class="benefits">
           <div class="benefit">
-            <strong>Isolated branches</strong>
-            <p>Git worktrees at <code>.piko/worktrees/&lt;name&gt;</code></p>
+            <strong>Agent orchestration</strong>
+            <p>Manage multiple Claude Code agents from one dashboard</p>
           </div>
           <div class="benefit">
-            <strong>Isolated containers</strong>
-            <p>Each environment gets its own Docker network and ports</p>
+            <strong>Isolated environments</strong>
+            <p>Each feature gets its own code, ports, containers, and data</p>
           </div>
           <div class="benefit">
-            <strong>Persistent sessions</strong>
-            <p>tmux sessions you can attach/detach from</p>
-          </div>
-          <div class="benefit">
-            <strong>Isolated data</strong>
-            <p>Separate directories for databases and caches</p>
+            <strong>Familiar tools</strong>
+            <p>Git worktrees, tmux, and Docker under the hood</p>
           </div>
         </div>
-      </section>
-
-      <section>
-        <h2>How it works</h2>
-        <p class="how-it-works">
-          <code>piko create</code> sets up a Git worktree, starts Docker containers on unique ports,
-          and opens a tmux session. <code>piko attach</code> reconnects you.
-          <code>piko destroy</code> tears everything down.
-          Works with or without Docker.
-        </p>
       </section>
 
       <div class="links">

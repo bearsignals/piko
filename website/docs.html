@@ -195,10 +195,12 @@
       }
 
       h3 {
-        font-size: 0.95rem;
-        font-weight: 600;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         margin: 1.5rem 0 0.5rem;
-        color: var(--text-main);
+        color: var(--text-muted);
       }
 
       p {
@@ -263,6 +265,7 @@
 
       .cmd-table td:first-child {
         font-family: var(--font-mono);
+        font-size: 0.75rem;
         color: var(--text-main);
         white-space: nowrap;
         padding-right: 1.5rem;
@@ -275,6 +278,63 @@
 
       .cmd-table tr:last-child td {
         border-bottom: none;
+      }
+
+      .recipe {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .recipe h3 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-main);
+        text-transform: none;
+        letter-spacing: normal;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .recipe .problem {
+        color: #f87171;
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+      }
+
+      .recipe .solution {
+        color: var(--accent);
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+        margin-top: 1rem;
+      }
+
+      .recipe .desc {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 0;
+      }
+
+      .recipe pre {
+        margin-bottom: 0;
+      }
+
+      .recipe pre:not(:last-child) {
+        margin-bottom: 1rem;
+      }
+
+      .recipe p:last-of-type {
+        margin-bottom: 0.75rem;
       }
 
       footer {
@@ -345,25 +405,28 @@
     <div class="layout">
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-group">
-          <div class="sidebar-title">Basics</div>
+          <div class="sidebar-title">Getting Started</div>
           <ul>
+            <li><a href="#what-is-piko">What is Piko?</a></li>
             <li><a href="#install">Install</a></li>
             <li><a href="#quick-start">Quick Start</a></li>
+            <li><a href="#modes">Understanding Modes</a></li>
           </ul>
         </div>
         <div class="sidebar-group">
           <div class="sidebar-title">Reference</div>
           <ul>
             <li><a href="#commands">Commands</a></li>
-            <li><a href="#env-vars">Environment Variables</a></li>
             <li><a href="#configuration">Configuration</a></li>
+            <li><a href="#env-vars">Environment Variables</a></li>
           </ul>
         </div>
         <div class="sidebar-group">
-          <div class="sidebar-title">Advanced</div>
+          <div class="sidebar-title">Guides</div>
           <ul>
-            <li><a href="#modes">Docker vs Simple Mode</a></li>
-            <li><a href="#claude-code">Claude Code Integration</a></li>
+            <li><a href="#recipes">Recipes</a></li>
+            <li><a href="#dashboard">Web Dashboard</a></li>
+            <li><a href="#claude-code">Claude Code</a></li>
           </ul>
         </div>
       </aside>
@@ -371,9 +434,15 @@
       <main class="content">
         <h1>Documentation</h1>
 
+        <h2 id="what-is-piko">What is Piko?</h2>
+        <p>
+          Piko creates isolated dev environments for parallel feature work. Each
+          one gets its own worktree, tmux session, and optional Docker
+          containers. No stashing, no branch juggling, only switching.
+        </p>
+
         <h2 id="install">Install</h2>
         <pre><code>go install github.com/bearsignals/piko@latest</code></pre>
-        <p>Requires Go 1.21+, Git, and tmux. Docker is optional.</p>
 
         <h2 id="quick-start">Quick Start</h2>
         <pre><code><span class="comment"># Initialize piko in your project</span>
@@ -394,9 +463,46 @@ piko attach <span class="arg">feature-auth</span>
 <span class="comment"># When done, tear it all down</span>
 piko destroy <span class="arg">feature-auth</span></code></pre>
 
+        <h2 id="modes">Understanding Modes</h2>
+        <p>
+          Piko auto-detects which mode to use based on your project structure.
+        </p>
+
+        <h3>Docker Mode</h3>
+        <p>
+          If your project has <code>docker-compose.yml</code>, piko
+          automatically:
+        </p>
+        <ul
+          style="
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem 1.5rem;
+          "
+        >
+          <li>Creates an isolated Docker network per environment</li>
+          <li>Allocates unique ports dynamically</li>
+          <li>Sets <code>PIKO_DB_PORT</code> for database access</li>
+        </ul>
+
+        <h3>Simple Mode</h3>
+        <p>Without Docker Compose, piko provides:</p>
+        <ul
+          style="
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem 1.5rem;
+          "
+        >
+          <li>Git worktrees for code isolation</li>
+          <li>Tmux sessions for terminal management</li>
+          <li>Data directories for state isolation</li>
+          <li>Environment variables for port derivation</li>
+        </ul>
+
         <h2 id="commands">Commands</h2>
 
-        <h3>Core</h3>
+        <h3>Environment Management</h3>
         <table class="cmd-table">
           <tr>
             <td>piko init</td>
@@ -414,9 +520,20 @@ piko destroy <span class="arg">feature-auth</span></code></pre>
             <td>piko destroy &lt;name&gt;</td>
             <td>Tear down environment (removes worktree, stops containers)</td>
           </tr>
+          <tr>
+            <td>piko env ls</td>
+            <td>List all environments in the current project</td>
+          </tr>
+          <tr>
+            <td>piko env run &lt;name&gt;</td>
+            <td>
+              Execute the <code>run</code> script from .piko.yml in an
+              environment
+            </td>
+          </tr>
         </table>
 
-        <h3>Server &amp; Diagnostics</h3>
+        <h3>Server &amp; Tools</h3>
         <table class="cmd-table">
           <tr>
             <td>piko server</td>
@@ -432,8 +549,47 @@ piko destroy <span class="arg">feature-auth</span></code></pre>
           </tr>
         </table>
 
+        <h3>Claude Code</h3>
+        <table class="cmd-table">
+          <tr>
+            <td>piko cc init</td>
+            <td>Set up Claude Code hooks in the current directory</td>
+          </tr>
+        </table>
+
+        <h2 id="configuration">Configuration</h2>
+        <p>
+          Piko works without configuration, but you can create
+          <code>.piko.yml</code> in your project root to hook into the
+          environment lifecycle.
+        </p>
+
+        <h3>Lifecycle Hooks</h3>
+        <table class="cmd-table">
+          <tr>
+            <td>setup</td>
+            <td>
+              Runs once after <code>piko create</code>. The environment is ready
+              but your app may need dependencies installed or config files
+              linked.
+            </td>
+          </tr>
+          <tr>
+            <td>run</td>
+            <td>
+              Executed by <code>piko env run &lt;name&gt;</code>. Use this to
+              start your dev server with environment-specific settings.
+            </td>
+          </tr>
+        </table>
+        <p>
+          All scripts run inside the worktree directory with
+          <code>PIKO_*</code> environment variables available. See
+          <a href="#recipes">Recipes</a> for practical examples.
+        </p>
+
         <h2 id="env-vars">Environment Variables</h2>
-        <p>Available in your tmux session and scripts:</p>
+        <p>These variables are available in your tmux session and scripts:</p>
         <table class="cmd-table">
           <tr>
             <td>PIKO_ENV_NAME</td>
@@ -457,92 +613,188 @@ piko destroy <span class="arg">feature-auth</span></code></pre>
           </tr>
           <tr>
             <td>PIKO_DB_PORT</td>
-            <td>Allocated database port (Docker mode)</td>
+            <td>Allocated database port (Docker mode only)</td>
           </tr>
         </table>
 
-        <h3>Port Derivation</h3>
-        <p>Use <code>PIKO_ENV_ID</code> to avoid port conflicts:</p>
-        <pre><code><span class="comment"># Shell</span>
-npm run dev -- --port $((3000 + PIKO_ENV_ID))
+        <h2 id="recipes">Recipes</h2>
+        <p>Common problems and how to solve them with piko primitives.</p>
 
-<span class="comment"># vite.config.js</span>
-server: { port: 3000 + parseInt(process.env.PIKO_ENV_ID || 0) }</code></pre>
+        <div class="recipe">
+          <h3>Installing Dependencies</h3>
+          <div class="problem">Problem</div>
+          <p class="desc">
+            Each new environment needs dependencies installed before you can
+            work.
+          </p>
+          <div class="solution">Solution</div>
+          <p class="desc">
+            Use the <code>setup</code> hook to run install commands once when
+            the environment is created.
+          </p>
+          <pre><code><span class="comment"># .piko.yml</span>
+scripts:
+  setup: |
+    npm install</code></pre>
+        </div>
 
-        <h3>Database Isolation</h3>
-        <pre><code><span class="comment"># SQLite</span>
+        <div class="recipe">
+          <h3>Starting Your Dev Server</h3>
+          <div class="problem">Problem</div>
+          <p class="desc">
+            You want a consistent way to start your app across environments.
+          </p>
+          <div class="solution">Solution</div>
+          <p class="desc">
+            Define a <code>run</code> script and use
+            <code>piko env run &lt;name&gt;</code>.
+          </p>
+          <pre><code><span class="comment"># .piko.yml</span>
+scripts:
+  run: |
+    npm run dev</code></pre>
+        </div>
+
+        <div class="recipe">
+          <h3>Sharing Config Files</h3>
+          <div class="problem">Problem</div>
+          <p class="desc">
+            Secrets and config files live in the project root, but each worktree
+            needs access.
+          </p>
+          <div class="solution">Solution</div>
+          <p class="desc">
+            Symlink shared files from <code>PIKO_ROOT</code> during setup.
+          </p>
+          <pre><code><span class="comment"># .piko.yml</span>
+scripts:
+  setup: |
+    ln -sf "$PIKO_ROOT/.env.local" .env.local
+    ln -sf "$PIKO_ROOT/.env.development" .env.development</code></pre>
+        </div>
+
+        <div class="recipe">
+          <h3>Avoiding Port Conflicts</h3>
+          <div class="problem">Problem</div>
+          <p class="desc">
+            Multiple environments running simultaneously fight over the same
+            port.
+          </p>
+          <div class="solution">Solution</div>
+          <p class="desc">
+            Use <code>PIKO_ENV_ID</code> to derive unique ports per environment.
+          </p>
+          <pre><code><span class="comment"># .piko.yml</span>
+scripts:
+  run: |
+    npm run dev -- --port $((3000 + PIKO_ENV_ID))</code></pre>
+          <p class="desc">Or configure it directly in your build tool:</p>
+          <pre><code><span class="comment"># vite.config.js</span>
+export default {
+  server: {
+    port: 3000 + parseInt(process.env.PIKO_ENV_ID || 0)
+  }
+}</code></pre>
+        </div>
+
+        <div class="recipe">
+          <h3>Isolating Databases</h3>
+          <div class="problem">Problem</div>
+          <p class="desc">
+            Environments share the same database, causing data conflicts.
+          </p>
+          <div class="solution">Solution</div>
+          <p class="desc">
+            Use <code>PIKO_DATA_DIR</code> for file-based databases or
+            <code>PIKO_DB_PORT</code> for Docker-managed databases.
+          </p>
+          <pre><code><span class="comment"># SQLite - each environment gets its own database file</span>
 DATABASE_URL=sqlite:${PIKO_DATA_DIR}/dev.db
 
-<span class="comment"># Postgres (Docker mode)</span>
+<span class="comment"># Postgres (Docker mode) - piko allocates a unique port</span>
 DATABASE_URL=postgres://localhost:${PIKO_DB_PORT}/dev</code></pre>
+        </div>
 
-        <h2 id="configuration">Configuration</h2>
-        <p>Piko works without configuration. Optionally create <code>.piko.yml</code> to hook into the environment lifecycle:</p>
-        <pre><code>scripts:
+        <div class="recipe">
+          <h3>Full Example</h3>
+          <p class="desc">
+            A complete <code>.piko.yml</code> combining multiple recipes:
+          </p>
+          <pre><code>scripts:
   setup: |
     npm install
-    ln -s "$PIKO_ROOT/.env.local" .env.local
+    ln -sf "$PIKO_ROOT/.env.local" .env.local
+    npx prisma migrate dev
 
   run: |
     npm run dev -- --port $((3000 + PIKO_ENV_ID))</code></pre>
+        </div>
 
-        <h3>Lifecycle Hooks</h3>
-        <table class="cmd-table">
-          <tr>
-            <td>setup</td>
-            <td>Runs once after <code>piko create</code>. Use for installing dependencies, symlinking config files, or any one-time setup.</td>
-          </tr>
-          <tr>
-            <td>run</td>
-            <td>Executed by <code>piko env run &lt;name&gt;</code>. Use for starting your dev server with environment-specific config.</td>
-          </tr>
-        </table>
-        <p>All scripts run inside the worktree directory with <code>PIKO_*</code> environment variables available.</p>
+        <h2 id="dashboard">Web Dashboard</h2>
+        <p>
+          Piko includes a web dashboard for monitoring and managing your
+          environments.
+        </p>
 
-        <h2 id="modes">Docker vs Simple Mode</h2>
-
-        <h3>Docker Mode</h3>
-        <p>If your project has <code>docker-compose.yml</code>, piko automatically:</p>
-        <ul style="color: var(--text-muted); font-size: 0.9rem; margin: 0.5rem 0 1rem 1.5rem;">
-          <li>Creates an isolated Docker network per environment</li>
-          <li>Allocates unique ports dynamically</li>
-          <li>Sets <code>PIKO_DB_PORT</code> for database access</li>
+        <h3>Starting the Server</h3>
+        <pre><code>piko server</code></pre>
+        <p>
+          This starts the web UI at <code>http://localhost:19876</code>. The
+          dashboard provides:
+        </p>
+        <ul
+          style="
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem 1.5rem;
+          "
+        >
+          <li>Overview of all your piko projects and environments</li>
+          <li>Real-time status of running environments</li>
+          <li>Quick actions to attach, destroy, or manage environments</li>
         </ul>
-
-        <h3>Simple Mode</h3>
-        <p>Without Docker Compose, piko provides:</p>
-        <ul style="color: var(--text-muted); font-size: 0.9rem; margin: 0.5rem 0 1rem 1.5rem;">
-          <li>Git worktrees for code isolation</li>
-          <li>Tmux sessions for terminal management</li>
-          <li>Data directories for state isolation</li>
-          <li>Environment variables for port derivation</li>
-        </ul>
-        <p>Mode is auto-detected. No configuration needed.</p>
-
-        <h2 id="claude-code">Claude Code Integration</h2>
-        <p>Piko integrates with Claude Code to show permission prompts in a web UI instead of the terminal.</p>
-
-        <h3>How It Works</h3>
-        <p>When Claude Code requests permission (file edit, bash command, etc.), piko:</p>
-        <ul style="color: var(--text-muted); font-size: 0.9rem; margin: 0.5rem 0 1rem 1.5rem;">
-          <li>Receives the notification via hooks</li>
-          <li>Displays it in the web UI at <code>http://localhost:19876</code></li>
-          <li>Sends your response back to Claude Code</li>
-        </ul>
-
-        <h3>Setup</h3>
-        <pre><code><span class="comment"># Initialize Claude Code hooks (run this before starting Claude)</span>
-piko cc init
-
-<span class="comment"># Start the piko server</span>
-piko server</code></pre>
-        <p>The <code>piko cc init</code> command creates <code>.claude/settings.json</code> with hooks that route notifications to piko. Run this before launching Claude Code in your environment.</p>
 
         <h3>Diagnostics</h3>
-        <pre><code><span class="comment"># Check hook status for all environments</span>
-piko doctor</code></pre>
-        <p>This shows whether hooks are installed and if the server is running.</p>
+        <pre><code>piko doctor</code></pre>
+        <p>
+          Check system dependencies, server status, and hook configurations
+          across all environments.
+        </p>
 
+        <h2 id="claude-code">Claude Code Integration</h2>
+        <p>
+          Orchestrate and manage your Claude Code agents directly from the piko
+          dashboard instead of the terminal.
+        </p>
+
+        <h3>How It Works</h3>
+        <p>
+          When Claude Code requests permission (file edit, bash command, etc.),
+          the request appears in the web dashboard where you can approve or deny
+          it. This lets you:
+        </p>
+        <ul
+          style="
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem 1.5rem;
+          "
+        >
+          <li>
+            Manage multiple agents across different environments from one place
+          </li>
+          <li>Review permission requests without switching terminal windows</li>
+          <li>Keep your terminal free for other work while agents run</li>
+        </ul>
+
+        <h3>How to setup the claude code integration</h3>
+        <p>Run this in each environment before starting Claude Code:</p>
+        <pre><code>piko cc init</code></pre>
+        <p>
+          This creates <code>.claude/settings.json</code> with hooks that route
+          notifications to piko. Make sure <code>piko server</code> is running
+          to receive them.
+        </p>
       </main>
     </div>
 
