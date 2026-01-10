@@ -83,6 +83,10 @@
         display: flex;
         flex-direction: column;
         max-height: calc(100vh - 100px);
+        transition: flex-basis 0.2s ease;
+      }
+      .project-column.expanded {
+        flex: 0 0 990px;
       }
       .project-header {
         padding: 0.75rem;
@@ -96,6 +100,11 @@
         font-size: 0.9rem;
         font-weight: 500;
         color: #fff;
+        cursor: pointer;
+        user-select: none;
+      }
+      .project-title:hover {
+        color: #60a5fa;
       }
       .project-meta {
         display: flex;
@@ -779,7 +788,7 @@
             return `
                           <div class="project-column">
                               <div class="project-header">
-                                  <span class="project-title">${project.name}</span>
+                                  <span class="project-title" onclick="toggleColumnWidth(this)">${project.name}</span>
                                   <div class="project-meta">
                                       <span class="project-count">${countText}</span>
                                       <button class="btn btn-small" onclick="showCreateModal(${project.id})">+ New</button>
@@ -1580,6 +1589,13 @@
           }
         } catch (err) {
           showError("Failed to dismiss notification");
+        }
+      }
+
+      function toggleColumnWidth(element) {
+        const column = element.closest(".project-column");
+        if (column) {
+          column.classList.toggle("expanded");
         }
       }
 
