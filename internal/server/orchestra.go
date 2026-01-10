@@ -272,6 +272,11 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[notify] received: project=%s env=%s pid=%d tmux_pane=%q (decode took %v)", req.ProjectName, req.EnvName, req.ParentPID, req.TmuxTarget, time.Since(start))
 
+	if req.NotificationType == "permission_prompt" {
+		writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+		return
+	}
+
 	tmuxTarget := req.TmuxTarget
 	if tmuxTarget == "" && req.ParentPID > 0 {
 		paneStart := time.Now()
