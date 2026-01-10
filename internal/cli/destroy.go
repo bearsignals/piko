@@ -13,11 +13,11 @@ var destroyCmd = &cobra.Command{
 	Annotations: Requires(ToolGit, ToolTmux),
 }
 
-var destroyVolumes bool
+var keepVolumes bool
 
 func init() {
 	envCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().BoolVar(&destroyVolumes, "volumes", false, "Also remove Docker volumes")
+	destroyCmd.Flags().BoolVar(&keepVolumes, "keep-volumes", false, "Keep Docker volumes instead of removing them")
 }
 
 func runDestroy(cmd *cobra.Command, args []string) error {
@@ -32,7 +32,7 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 
 	api := NewAPIClient()
 	if api.IsServerRunning() {
-		if err := api.DestroyEnvironment(resolved.Project.ID, resolved.Environment.Name, destroyVolumes); err == nil {
+		if err := api.DestroyEnvironment(resolved.Project.ID, resolved.Environment.Name, !keepVolumes); err == nil {
 			return nil
 		}
 	}
@@ -41,7 +41,7 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 		DB:            resolved.Ctx.DB,
 		Project:       resolved.Project,
 		Environment:   resolved.Environment,
-		RemoveVolumes: destroyVolumes,
+		RemoveVolumes: !keepVolumes,
 		Logger:        &operations.StdoutLogger{},
 	})
 }

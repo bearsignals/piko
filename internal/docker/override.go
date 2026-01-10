@@ -9,6 +9,8 @@ import (
 )
 
 func ApplyOverrides(project *types.Project, projectName, envName string, allocations []ports.Allocation) {
+	pikoPrefix := fmt.Sprintf("piko-%s-%s", projectName, envName)
+
 	portsByService := make(map[string][]types.ServicePortConfig)
 	for _, alloc := range allocations {
 		portsByService[alloc.Service] = append(portsByService[alloc.Service], types.ServicePortConfig{
@@ -24,12 +26,18 @@ func ApplyOverrides(project *types.Project, projectName, envName string, allocat
 		}
 	}
 
-	networkName := fmt.Sprintf("piko-%s-%s", projectName, envName)
 	project.Networks = types.Networks{
 		"default": types.NetworkConfig{
-			Name: networkName,
+			Name: pikoPrefix,
 		},
 	}
+
+	newVolumes := types.Volumes{}
+	for volName, volConfig := range project.Volumes {
+		volConfig.Name = fmt.Sprintf("%s_%s", pikoPrefix, volName)
+		newVolumes[volName] = volConfig
+	}
+	project.Volumes = newVolumes
 }
 
 func WriteProjectFile(path string, project *types.Project) error {
