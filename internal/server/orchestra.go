@@ -29,24 +29,28 @@ type OrchestraMessage struct {
 }
 
 type CCNotification struct {
-	ID               string    `json:"id"`
-	ProjectName      string    `json:"project_name"`
-	EnvName          string    `json:"env_name"`
-	TmuxSession      string    `json:"tmux_session"`
-	TmuxTarget       string    `json:"tmux_target"`
-	NotificationType string    `json:"notification_type"`
-	Message          string    `json:"message"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID               string          `json:"id"`
+	ProjectName      string          `json:"project_name"`
+	EnvName          string          `json:"env_name"`
+	TmuxSession      string          `json:"tmux_session"`
+	TmuxTarget       string          `json:"tmux_target"`
+	NotificationType string          `json:"notification_type"`
+	Message          string          `json:"message"`
+	ToolName         string          `json:"tool_name,omitempty"`
+	ToolInput        json.RawMessage `json:"tool_input,omitempty"`
+	CreatedAt        time.Time       `json:"created_at"`
 }
 
 type NotifyRequest struct {
-	ProjectName      string `json:"project_name"`
-	EnvName          string `json:"env_name"`
-	TmuxSession      string `json:"tmux_session"`
-	TmuxTarget       string `json:"tmux_target"`
-	ParentPID        int    `json:"parent_pid"`
-	NotificationType string `json:"notification_type"`
-	Message          string `json:"message"`
+	ProjectName      string          `json:"project_name"`
+	EnvName          string          `json:"env_name"`
+	TmuxSession      string          `json:"tmux_session"`
+	TmuxTarget       string          `json:"tmux_target"`
+	ParentPID        int             `json:"parent_pid"`
+	NotificationType string          `json:"notification_type"`
+	Message          string          `json:"message"`
+	ToolName         string          `json:"tool_name,omitempty"`
+	ToolInput        json.RawMessage `json:"tool_input,omitempty"`
 }
 
 type RespondRequest struct {
@@ -290,6 +294,8 @@ func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
 		TmuxTarget:       tmuxTarget,
 		NotificationType: req.NotificationType,
 		Message:          req.Message,
+		ToolName:         req.ToolName,
+		ToolInput:        req.ToolInput,
 		CreatedAt:        time.Now(),
 	}
 

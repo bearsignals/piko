@@ -40,13 +40,15 @@ type hookInput struct {
 }
 
 type notifyRequest struct {
-	ProjectName      string `json:"project_name"`
-	EnvName          string `json:"env_name"`
-	TmuxSession      string `json:"tmux_session"`
-	TmuxTarget       string `json:"tmux_target"`
-	ParentPID        int    `json:"parent_pid"`
-	NotificationType string `json:"notification_type"`
-	Message          string `json:"message"`
+	ProjectName      string          `json:"project_name"`
+	EnvName          string          `json:"env_name"`
+	TmuxSession      string          `json:"tmux_session"`
+	TmuxTarget       string          `json:"tmux_target"`
+	ParentPID        int             `json:"parent_pid"`
+	NotificationType string          `json:"notification_type"`
+	Message          string          `json:"message"`
+	ToolName         string          `json:"tool_name,omitempty"`
+	ToolInput        json.RawMessage `json:"tool_input,omitempty"`
 }
 
 func runCCNotify(cmd *cobra.Command, args []string) error {
@@ -98,6 +100,8 @@ func runCCNotify(cmd *cobra.Command, args []string) error {
 		ParentPID:        parentPID,
 		NotificationType: notificationType,
 		Message:          message,
+		ToolName:         hook.ToolName,
+		ToolInput:        hook.ToolInput,
 	}
 	log.Struct("notifyRequest", req)
 
