@@ -83,6 +83,10 @@
         display: flex;
         flex-direction: column;
         max-height: calc(100vh - 100px);
+        transition: flex-basis 0.2s ease;
+      }
+      .project-column.expanded {
+        flex: 0 0 990px;
       }
       .project-header {
         padding: 0.75rem;
@@ -96,6 +100,11 @@
         font-size: 0.9rem;
         font-weight: 500;
         color: #fff;
+        cursor: pointer;
+        user-select: none;
+      }
+      .project-title:hover {
+        color: #60a5fa;
       }
       .project-meta {
         display: flex;
@@ -380,7 +389,7 @@
         border-top: none;
         border-bottom-left-radius: 8px;
         border-bottom-right-radius: 8px;
-        padding: 0.6rem;
+        padding: 0.75rem;
         animation: slideDown 0.2s ease-out;
       }
       @keyframes slideDown {
@@ -398,16 +407,17 @@
         color: #818cf8;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.4rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
       }
       .notification-message {
-        font-size: 0.75rem;
-        color: #c7d2fe;
-        margin-bottom: 0.5rem;
+        font-size: 0.8rem;
+        color: #e0e7ff;
+        margin-bottom: 0.6rem;
         white-space: pre-wrap;
         word-break: break-word;
-        max-height: 60px;
-        overflow-y: auto;
       }
       .notification-actions {
         display: flex;
@@ -427,6 +437,127 @@
         outline: none;
         border-color: #6366f1;
       }
+      .notification-textarea {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #3730a3;
+        border-radius: 4px;
+        background: #0f0f0f;
+        color: #fff;
+        font-size: 0.75rem;
+        resize: none;
+        min-height: 50px;
+        font-family: inherit;
+      }
+      .notification-textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+      }
+      .notification-textarea::placeholder {
+        color: #6b7280;
+      }
+      .option-card {
+        background: #252550;
+        border: 1px solid #3730a3;
+        border-radius: 6px;
+        padding: 0.5rem 0.6rem;
+        margin-bottom: 0.4rem;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .option-card:hover {
+        background: #312e81;
+        border-color: #6366f1;
+      }
+      .option-card:active {
+        transform: scale(0.98);
+      }
+      .option-title {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #e0e7ff;
+        margin-bottom: 0.15rem;
+      }
+      .option-desc {
+        font-size: 0.7rem;
+        color: #a5b4fc;
+      }
+      .code-block {
+        background: #0f0f0f;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 0.5rem;
+        font-family: monospace;
+        font-size: 0.7rem;
+        color: #e5e5e5;
+        margin-bottom: 0.6rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .code-block .command-prefix {
+        color: #22c55e;
+      }
+      .file-path {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.75rem;
+        color: #a5b4fc;
+        margin-bottom: 0.5rem;
+        font-family: monospace;
+      }
+      .diff-block {
+        background: #0f0f0f;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 0.4rem;
+        font-family: monospace;
+        font-size: 0.65rem;
+        margin-bottom: 0.6rem;
+        overflow-x: auto;
+      }
+      .diff-line {
+        white-space: pre;
+      }
+      .diff-line.removed {
+        color: #f87171;
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .diff-line.added {
+        color: #4ade80;
+        background: rgba(34, 197, 94, 0.1);
+      }
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 500;
+      }
+      .status-badge.waiting {
+        background: rgba(234, 179, 8, 0.2);
+        color: #fbbf24;
+      }
+      .status-badge.stopped {
+        background: rgba(107, 114, 128, 0.2);
+        color: #9ca3af;
+      }
+      .status-badge.warning {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+      }
+      .custom-input-section {
+        margin-top: 0.5rem;
+        display: flex;
+        gap: 0.4rem;
+        align-items: flex-end;
+      }
+      .custom-input-section .notification-textarea {
+        flex: 1;
+      }
       .btn-allow {
         background: #22c55e;
       }
@@ -438,6 +569,12 @@
       }
       .btn-deny:hover {
         background: #dc2626;
+      }
+      .btn-dismiss {
+        background: #4b5563;
+      }
+      .btn-dismiss:hover {
+        background: #6b7280;
       }
       .btn-loading {
         position: relative;
@@ -651,7 +788,7 @@
             return `
                           <div class="project-column">
                               <div class="project-header">
-                                  <span class="project-title">${project.name}</span>
+                                  <span class="project-title" onclick="toggleColumnWidth(this)">${project.name}</span>
                                   <div class="project-meta">
                                       <span class="project-count">${countText}</span>
                                       <button class="btn btn-small" onclick="showCreateModal(${project.id})">+ New</button>
@@ -689,33 +826,227 @@
       }
 
       function renderNotification(n) {
-        let actions = "";
-        if (n.notification_type === "permission_prompt") {
-          actions = `
-                          <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
-                          <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
-                      `;
-        } else {
-          actions = `
-                          <input type="text" class="notification-input" placeholder="Response..."
-                              onkeypress="handleNotificationKeypress(event, '${n.id}')" data-notification-id="${n.id}">
-                          <button class="btn btn-small" onclick="sendNotificationResponse('${n.id}')">Send</button>
-                      `;
+        const toolName = (n.tool_name || "").toLowerCase();
+        if (toolName === "askuserquestion") {
+          return renderAskUserQuestion(n);
         }
+        if (toolName === "bash") {
+          return renderBashPermission(n);
+        }
+        if (toolName === "write") {
+          return renderWritePermission(n);
+        }
+        if (toolName === "edit") {
+          return renderEditPermission(n);
+        }
+        if (toolName === "read") {
+          return renderReadPermission(n);
+        }
+        if (toolName) {
+          return renderGenericToolPermission(n);
+        }
+        if (n.notification_type === "idle_prompt") {
+          return renderIdlePrompt(n);
+        }
+        if (n.notification_type === "stop") {
+          return renderStopNotification(n);
+        }
+        if (n.notification_type === "permission_prompt") {
+          return renderPermissionPrompt(n);
+        }
+        return renderGenericNotification(n);
+      }
+
+      function parseToolInput(n) {
+        if (!n.tool_input) return {};
+        if (typeof n.tool_input === "string") {
+          try {
+            return JSON.parse(n.tool_input);
+          } catch (e) {
+            return {};
+          }
+        }
+        return n.tool_input;
+      }
+
+      function renderAskUserQuestion(n) {
+        const toolInput = parseToolInput(n);
+
+        const questions = toolInput.questions || [];
+        const firstQ = questions[0] || {};
+        const options = firstQ.options || [];
+        const question = firstQ.question || "Question";
+
+        const optionsHtml = options
+          .map(
+            (opt, idx) => `
+            <div class="option-card" onclick="sendOptionResponse('${n.id}', ${idx + 1})">
+              <div class="option-title">${escapeHtml(opt.label)}</div>
+              <div class="option-desc">${escapeHtml(opt.description || "")}</div>
+            </div>
+          `
+          )
+          .join("");
 
         return `
-                      <div class="env-notification" data-notification-id="${
-                        n.id
-                      }">
-                          <div class="notification-label">${
-                            n.notification_type
-                          }</div>
-                          <div class="notification-message">${escapeHtml(
-                            n.message
-                          )}</div>
-                          <div class="notification-actions">${actions}</div>
-                      </div>
-                  `;
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">AskUserQuestion</div>
+            <div class="notification-message">${escapeHtml(question)}</div>
+            ${optionsHtml}
+            <div class="custom-input-section">
+              <textarea class="notification-textarea" placeholder="Or type a custom response..."
+                data-notification-id="${n.id}" rows="2"></textarea>
+              <button class="btn btn-small" onclick="sendCustomResponse('${n.id}', ${options.length + 1})">Send</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderBashPermission(n) {
+        const toolInput = parseToolInput(n);
+
+        const command = toolInput.command || "";
+
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">Bash</div>
+            <div class="code-block"><span class="command-prefix">$</span> ${escapeHtml(command)}</div>
+            <div class="notification-actions">
+              <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+              <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderWritePermission(n) {
+        const toolInput = parseToolInput(n);
+
+        const filePath = toolInput.file_path || "";
+
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">Write</div>
+            <div class="file-path">${escapeHtml(filePath)}</div>
+            <div class="notification-actions">
+              <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+              <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderEditPermission(n) {
+        const toolInput = parseToolInput(n);
+
+        const filePath = toolInput.file_path || "";
+        const oldStr = toolInput.old_string || "";
+        const newStr = toolInput.new_string || "";
+
+        const diffHtml =
+          oldStr || newStr
+            ? `
+            <div class="diff-block">
+              ${oldStr ? `<div class="diff-line removed">- ${escapeHtml(oldStr.split("\n")[0])}${oldStr.split("\n").length > 1 ? "..." : ""}</div>` : ""}
+              ${newStr ? `<div class="diff-line added">+ ${escapeHtml(newStr.split("\n")[0])}${newStr.split("\n").length > 1 ? "..." : ""}</div>` : ""}
+            </div>
+          `
+            : "";
+
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">Edit</div>
+            <div class="file-path">${escapeHtml(filePath)}</div>
+            ${diffHtml}
+            <div class="notification-actions">
+              <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+              <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderReadPermission(n) {
+        const toolInput = parseToolInput(n);
+
+        const filePath = toolInput.file_path || "";
+
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">Read</div>
+            <div class="file-path">${escapeHtml(filePath)}</div>
+            <div class="notification-actions">
+              <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+              <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderGenericToolPermission(n) {
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">${escapeHtml(n.tool_name)}</div>
+            <div class="notification-message">${escapeHtml(n.message)}</div>
+            <div class="notification-actions">
+              <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+              <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderIdlePrompt(n) {
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label"><span class="status-badge waiting">Waiting for input</span></div>
+            <div class="notification-message">${escapeHtml(n.message)}</div>
+            <div class="custom-input-section">
+              <textarea class="notification-textarea" placeholder="Type a message..."
+                data-notification-id="${n.id}" rows="2"></textarea>
+              <button class="btn btn-small" onclick="sendTextResponse('${n.id}')">Send</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderStopNotification(n) {
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label"><span class="status-badge stopped">Stopped</span></div>
+            <div class="notification-message">${escapeHtml(n.message || "Claude has finished")}</div>
+            <div class="notification-actions">
+              <button class="btn btn-small btn-dismiss" onclick="dismissNotification('${n.id}')">Dismiss</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderPermissionPrompt(n) {
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">Permission</div>
+            <div class="notification-message">${escapeHtml(n.message)}</div>
+            <div class="notification-actions">
+              <button class="btn btn-small btn-allow" onclick="sendKeyResponse('${n.id}', 'Enter')">Allow</button>
+              <button class="btn btn-small btn-deny" onclick="sendKeyResponse('${n.id}', 'Escape')">Deny</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderGenericNotification(n) {
+        return `
+          <div class="env-notification" data-notification-id="${n.id}">
+            <div class="notification-label">${escapeHtml(n.notification_type)}</div>
+            <div class="notification-message">${escapeHtml(n.message)}</div>
+            <div class="custom-input-section">
+              <textarea class="notification-textarea" placeholder="Type a response..."
+                data-notification-id="${n.id}" rows="2"></textarea>
+              <button class="btn btn-small" onclick="sendTextResponse('${n.id}')">Send</button>
+            </div>
+          </div>
+        `;
       }
 
       function renderEnvironment(project, env) {
@@ -1065,6 +1396,206 @@
           }
         } finally {
           sendingNotifications.delete(id);
+        }
+      }
+
+      async function sendOptionResponse(id, optionNum) {
+        if (sendingNotifications.has(id)) return;
+
+        sendingNotifications.add(id);
+        const notification = document.querySelector(
+          `.env-notification[data-notification-id="${id}"]`
+        );
+        if (notification) {
+          const cards = notification.querySelectorAll(".option-card");
+          cards.forEach((c) => (c.style.pointerEvents = "none"));
+          const buttons = notification.querySelectorAll(".btn");
+          buttons.forEach((b) => (b.disabled = true));
+        }
+
+        try {
+          const res = await fetch("/api/orchestra/respond", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              notification_id: id,
+              response: String(optionNum),
+              response_type: "option",
+            }),
+          });
+
+          if (res.ok) {
+            notifications.delete(id);
+            renderProjects(cachedResults);
+          } else {
+            const data = await res.json();
+            showError(data.error || "Failed to send response");
+            if (notification) {
+              const cards = notification.querySelectorAll(".option-card");
+              cards.forEach((c) => (c.style.pointerEvents = "auto"));
+              const buttons = notification.querySelectorAll(".btn");
+              buttons.forEach((b) => (b.disabled = false));
+            }
+          }
+        } catch (err) {
+          showError("Failed to send response");
+          if (notification) {
+            const cards = notification.querySelectorAll(".option-card");
+            cards.forEach((c) => (c.style.pointerEvents = "auto"));
+            const buttons = notification.querySelectorAll(".btn");
+            buttons.forEach((b) => (b.disabled = false));
+          }
+        } finally {
+          sendingNotifications.delete(id);
+        }
+      }
+
+      async function sendCustomResponse(id, otherOptionNum) {
+        if (sendingNotifications.has(id)) return;
+
+        const textarea = document.querySelector(
+          `textarea[data-notification-id="${id}"]`
+        );
+        if (!textarea) return;
+
+        const response = textarea.value.trim();
+        if (!response) {
+          textarea.focus();
+          return;
+        }
+
+        sendingNotifications.add(id);
+        const notification = document.querySelector(
+          `.env-notification[data-notification-id="${id}"]`
+        );
+        if (notification) {
+          const cards = notification.querySelectorAll(".option-card");
+          cards.forEach((c) => (c.style.pointerEvents = "none"));
+          const buttons = notification.querySelectorAll(".btn");
+          buttons.forEach((b) => (b.disabled = true));
+          textarea.disabled = true;
+        }
+
+        try {
+          const res = await fetch("/api/orchestra/respond", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              notification_id: id,
+              response: response,
+              response_type: "custom",
+              option_num: otherOptionNum,
+            }),
+          });
+
+          if (res.ok) {
+            notifications.delete(id);
+            renderProjects(cachedResults);
+          } else {
+            const data = await res.json();
+            showError(data.error || "Failed to send response");
+            if (notification) {
+              const cards = notification.querySelectorAll(".option-card");
+              cards.forEach((c) => (c.style.pointerEvents = "auto"));
+              const buttons = notification.querySelectorAll(".btn");
+              buttons.forEach((b) => (b.disabled = false));
+              textarea.disabled = false;
+            }
+          }
+        } catch (err) {
+          showError("Failed to send response");
+          if (notification) {
+            const cards = notification.querySelectorAll(".option-card");
+            cards.forEach((c) => (c.style.pointerEvents = "auto"));
+            const buttons = notification.querySelectorAll(".btn");
+            buttons.forEach((b) => (b.disabled = false));
+            textarea.disabled = false;
+          }
+        } finally {
+          sendingNotifications.delete(id);
+        }
+      }
+
+      async function sendTextResponse(id) {
+        if (sendingNotifications.has(id)) return;
+
+        const textarea = document.querySelector(
+          `textarea[data-notification-id="${id}"]`
+        );
+        if (!textarea) return;
+
+        const response = textarea.value.trim();
+        if (!response) {
+          textarea.focus();
+          return;
+        }
+
+        sendingNotifications.add(id);
+        textarea.disabled = true;
+        const notification = document.querySelector(
+          `.env-notification[data-notification-id="${id}"]`
+        );
+        if (notification) {
+          const buttons = notification.querySelectorAll(".btn");
+          buttons.forEach((b) => (b.disabled = true));
+        }
+
+        try {
+          const res = await fetch("/api/orchestra/respond", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              notification_id: id,
+              response: response,
+            }),
+          });
+
+          if (res.ok) {
+            notifications.delete(id);
+            renderProjects(cachedResults);
+          } else {
+            const data = await res.json();
+            showError(data.error || "Failed to send response");
+            textarea.disabled = false;
+            if (notification) {
+              const buttons = notification.querySelectorAll(".btn");
+              buttons.forEach((b) => (b.disabled = false));
+            }
+          }
+        } catch (err) {
+          showError("Failed to send response");
+          textarea.disabled = false;
+          if (notification) {
+            const buttons = notification.querySelectorAll(".btn");
+            buttons.forEach((b) => (b.disabled = false));
+          }
+        } finally {
+          sendingNotifications.delete(id);
+        }
+      }
+
+      async function dismissNotification(id) {
+        try {
+          const res = await fetch(`/api/orchestra/notifications/${id}`, {
+            method: "DELETE",
+          });
+
+          if (res.ok) {
+            notifications.delete(id);
+            renderProjects(cachedResults);
+          } else {
+            const data = await res.json();
+            showError(data.error || "Failed to dismiss notification");
+          }
+        } catch (err) {
+          showError("Failed to dismiss notification");
+        }
+      }
+
+      function toggleColumnWidth(element) {
+        const column = element.closest(".project-column");
+        if (column) {
+          column.classList.toggle("expanded");
         }
       }
 
