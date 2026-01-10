@@ -19,10 +19,10 @@ var envCmd = &cobra.Command{
 }
 
 var varsCmd = &cobra.Command{
-	Use:   "vars <name>",
+	Use:   "vars [name]",
 	Short: "Print PIKO_* environment variables",
 	Long:  `Print all PIKO_* environment variables for the given environment. Use with eval: eval $(piko env vars <name>)`,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(0, 1),
 	RunE:  runVars,
 }
 
@@ -36,7 +36,10 @@ func init() {
 
 func runVars(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 
 	resolved, err := ResolveEnvironmentGlobally(name)
 	if err != nil {

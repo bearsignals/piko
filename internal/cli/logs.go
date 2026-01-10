@@ -8,9 +8,9 @@ import (
 )
 
 var logsCmd = &cobra.Command{
-	Use:         "logs <name> [service]",
+	Use:         "logs [name] [service]",
 	Short:       "View container logs",
-	Args:        cobra.RangeArgs(1, 2),
+	Args:        cobra.RangeArgs(0, 2),
 	RunE:        runLogs,
 	Annotations: Requires(ToolDocker),
 }
@@ -28,7 +28,10 @@ func init() {
 
 func runLogs(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 	var serviceName string
 	if len(args) > 1 {
 		serviceName = args[1]

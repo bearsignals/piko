@@ -12,9 +12,9 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status <name>",
+	Use:   "status [name]",
 	Short: "Show detailed status of an environment",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(0, 1),
 	RunE:  runStatus,
 }
 
@@ -33,7 +33,10 @@ type containerInfo struct {
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 
 	resolved, err := ResolveEnvironmentGlobally(name)
 	if err != nil {

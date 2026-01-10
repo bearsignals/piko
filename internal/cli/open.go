@@ -12,9 +12,9 @@ import (
 )
 
 var openCmd = &cobra.Command{
-	Use:   "open <name> [service]",
+	Use:   "open [name] [service]",
 	Short: "Open an environment's service in browser",
-	Args:  cobra.RangeArgs(1, 2),
+	Args:  cobra.RangeArgs(0, 2),
 	RunE:  runOpen,
 }
 
@@ -24,7 +24,10 @@ func init() {
 
 func runOpen(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 	var serviceName string
 	if len(args) > 1 {
 		serviceName = args[1]

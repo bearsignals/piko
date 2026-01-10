@@ -20,6 +20,8 @@ func init() {
 	ccCmd.AddCommand(ccInitCmd)
 }
 
+var RequiredCCHooks = []string{"PermissionRequest", "Notification", "PostToolUse"}
+
 type claudeSettings struct {
 	Hooks map[string][]hookMatcher `json:"hooks"`
 }
@@ -57,40 +59,18 @@ func runCCInit(cmd *cobra.Command, args []string) error {
 		settings.Hooks = make(map[string][]hookMatcher)
 	}
 
-	settings.Hooks["PermissionRequest"] = []hookMatcher{
-		{
-			Hooks: []hookConfig{
-				{
-					Type:    "command",
-					Command: "piko cc notify",
-					Timeout: 10,
+	for _, hookName := range RequiredCCHooks {
+		settings.Hooks[hookName] = []hookMatcher{
+			{
+				Hooks: []hookConfig{
+					{
+						Type:    "command",
+						Command: "piko cc notify",
+						Timeout: 10,
+					},
 				},
 			},
-		},
-	}
-
-	settings.Hooks["Notification"] = []hookMatcher{
-		{
-			Hooks: []hookConfig{
-				{
-					Type:    "command",
-					Command: "piko cc notify",
-					Timeout: 10,
-				},
-			},
-		},
-	}
-
-	settings.Hooks["PostToolUse"] = []hookMatcher{
-		{
-			Hooks: []hookConfig{
-				{
-					Type:    "command",
-					Command: "piko cc notify",
-					Timeout: 10,
-				},
-			},
-		},
+		}
 	}
 
 	data, err := json.MarshalIndent(settings, "", "  ")
@@ -105,7 +85,7 @@ func runCCInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Created %s with Orchestra hooks\n", settingsPath)
 	fmt.Println()
 	fmt.Println("Claude Code will now send notifications to Piko when it needs input.")
-	fmt.Println("Make sure the Piko server is running: piko serve")
+	fmt.Println("Make sure the Piko server is running: piko server")
 
 	return nil
 }

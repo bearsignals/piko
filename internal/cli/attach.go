@@ -8,10 +8,10 @@ import (
 )
 
 var attachCmd = &cobra.Command{
-	Use:         "attach <name>",
+	Use:         "attach [name]",
 	Short:       "Attach to an environment's tmux session",
 	Long:        "Attach to an environment's tmux session. Use 'project/env' syntax to specify a project explicitly.",
-	Args:        cobra.ExactArgs(1),
+	Args:        cobra.RangeArgs(0, 1),
 	RunE:        runAttach,
 	Annotations: Requires(ToolTmux),
 }
@@ -22,7 +22,10 @@ func init() {
 
 func runAttach(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 
 	if tmux.IsInsideTmux() {
 		return fmt.Errorf("already inside tmux (use 'piko env switch %s' instead)", name)

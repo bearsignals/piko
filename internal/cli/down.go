@@ -6,9 +6,9 @@ import (
 )
 
 var downCmd = &cobra.Command{
-	Use:         "down <name>",
+	Use:         "down [name]",
 	Short:       "Stop containers for an environment",
-	Args:        cobra.ExactArgs(1),
+	Args:        cobra.RangeArgs(0, 1),
 	RunE:        runDown,
 	Annotations: Requires(ToolDocker),
 }
@@ -19,7 +19,10 @@ func init() {
 
 func runDown(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
-	name := args[0]
+	name, err := GetEnvNameOrSelect(args)
+	if err != nil {
+		return err
+	}
 
 	resolved, err := ResolveEnvironmentGlobally(name)
 	if err != nil {
