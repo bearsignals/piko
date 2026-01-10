@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gwuah/piko/internal/state"
+	"github.com/gwuah/piko/internal/version"
 )
 
 //go:embed static/*
@@ -94,7 +95,7 @@ func (s *Server) Start() error {
 		s.server.Shutdown(ctx)
 	}()
 
-	fmt.Printf("→ Piko server running at http://localhost:%d\n", s.port)
+	fmt.Printf("→ Piko server (%s) running at http://localhost:%d\n", version.Info(), s.port)
 	if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
 		return err
 	}
