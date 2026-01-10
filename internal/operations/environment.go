@@ -71,6 +71,7 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 		Name:       opts.Name,
 		BasePath:   worktreesDir,
 		BranchName: opts.Branch,
+		RepoPath:   opts.Project.RootPath,
 	}
 	wt, err := git.CreateWorktree(wtOpts)
 	if err != nil {

@@ -24,6 +24,7 @@ type WorktreeOptions struct {
 	Name       string
 	BasePath   string
 	BranchName string
+	RepoPath   string
 }
 
 type WorktreeResult struct {
@@ -34,18 +35,18 @@ type WorktreeResult struct {
 func CreateWorktree(opts WorktreeOptions) (*WorktreeResult, error) {
 	worktreePath := filepath.Join(opts.BasePath, opts.Name)
 
-	var output []byte
-	var err error
+	var cmd *run.Cmd
 	if opts.BranchName != "" {
-		output, err = run.Command("git", "worktree", "add", worktreePath, "-b", opts.Name, opts.BranchName).
-			Timeout(gitTimeout).
-			CombinedOutput()
+		cmd = run.Command("git", "worktree", "add", worktreePath, "-b", opts.Name, opts.BranchName)
 	} else {
-		output, err = run.Command("git", "worktree", "add", worktreePath, "-b", opts.Name).
-			Timeout(gitTimeout).
-			CombinedOutput()
+		cmd = run.Command("git", "worktree", "add", worktreePath, "-b", opts.Name)
 	}
 
+	if opts.RepoPath != "" {
+		cmd = cmd.Dir(opts.RepoPath)
+	}
+
+	output, err := cmd.Timeout(gitTimeout).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("git worktree add failed: %s: %w", string(output), err)
 	}
