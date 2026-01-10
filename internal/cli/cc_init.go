@@ -85,7 +85,7 @@ func runCCInit(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Created %s with Orchestra hooks\n", settingsPath)
 	fmt.Println()
 	fmt.Println("Claude Code will now send notifications to Piko when it needs input.")
-	fmt.Println("Make sure the Piko server is running: piko serve")
+	fmt.Println("Make sure the Piko server is running: piko server")
 
 	return nil
 }

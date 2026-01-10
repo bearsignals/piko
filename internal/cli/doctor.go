@@ -71,7 +71,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	if client.IsServerRunning() {
 		fmt.Printf("  %s✓%s piko server: running at %s\n", colorGreen, colorReset, client.BaseURL())
 	} else {
-		fmt.Printf("  %s✗%s piko server: not running (start with: piko serve)\n", colorRed, colorReset)
+		fmt.Printf("  %s✗%s piko server: not running (start with: piko server)\n", colorRed, colorReset)
 	}
 
 	fmt.Println()

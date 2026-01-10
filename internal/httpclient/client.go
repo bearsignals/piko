@@ -123,7 +123,7 @@ type ErrServerUnavailable struct {
 }
 
 func (e *ErrServerUnavailable) Error() string {
-	return "piko server is not running (start with: piko serve)"
+	return "piko server is not running (start with: piko server)"
 }
 
 func (e *ErrServerUnavailable) Unwrap() error {
