@@ -72,3 +72,14 @@ func RemoveWorktree(repoPath, worktreePath string) error {
 	}
 	return nil
 }
+
+func DeleteBranch(repoPath, branchName string) error {
+	output, err := run.Command("git", "branch", "-D", branchName).
+		Dir(repoPath).
+		Timeout(gitTimeout).
+		CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git branch delete failed: %s: %w", string(output), err)
+	}
+	return nil
+}

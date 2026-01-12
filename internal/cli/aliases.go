@@ -41,7 +41,8 @@ func init() {
 	rootCmd.AddCommand(rootDestroyCmd)
 	rootCmd.AddCommand(rootSwitchCmd)
 	rootCmd.AddCommand(rootPickCmd)
-	rootCreateCmd.Flags().StringVar(&createBranch, "branch", "", "Use existing branch instead of creating new")
+	rootCreateCmd.Flags().StringVar(&createBranch, "branch", "", "Base branch to create the new branch from")
 	rootCreateCmd.Flags().BoolVar(&createNoAttach, "no-attach", false, "Don't attach to tmux session after creation")
 	rootDestroyCmd.Flags().BoolVar(&keepVolumes, "keep-volumes", false, "Keep Docker volumes instead of removing them")
+	rootDestroyCmd.Flags().BoolVarP(&forceDestroy, "force", "f", false, "Also delete the git branch")
 }

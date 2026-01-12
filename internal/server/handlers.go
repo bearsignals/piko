@@ -312,6 +312,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleDestroyEnvironment(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	keepVolumes := r.URL.Query().Get("keep-volumes") == "true"
+	deleteBranch := r.URL.Query().Get("force") == "true"
 
 	project, err := s.getProjectFromPath(r)
 	if err != nil {
@@ -330,6 +331,7 @@ func (s *Server) handleDestroyEnvironment(w http.ResponseWriter, r *http.Request
 		Project:       project,
 		Environment:   environment,
 		RemoveVolumes: !keepVolumes,
+		DeleteBranch:  deleteBranch,
 		Logger:        &operations.SilentLogger{},
 	})
 	if err != nil {

@@ -234,6 +234,7 @@ type DestroyEnvironmentOptions struct {
 	Project       *state.Project
 	Environment   *state.Environment
 	RemoveVolumes bool
+	DeleteBranch  bool
 	Logger        Logger
 }
 
@@ -288,6 +289,16 @@ func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
 		log.Warnf("failed to remove worktree: %v", err)
 	} else {
 		log.Info("Removed worktree")
+	}
+
+	if opts.DeleteBranch {
+		if err := git.DeleteBranch(opts.Project.RootPath, opts.Environment.Name); err != nil {
+			log.Warnf("failed to delete branch: %v", err)
+		} else {
+			log.Infof("Deleted branch %s", opts.Environment.Name)
+		}
+	} else {
+		log.Infof("Branch %q preserved (commits remain). Use --force to delete.", opts.Environment.Name)
 	}
 
 	dataDir := filepath.Join(opts.Project.RootPath, ".piko", "data", opts.Environment.Name)

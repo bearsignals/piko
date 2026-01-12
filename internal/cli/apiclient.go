@@ -42,11 +42,13 @@ func (c *APIClient) CreateEnvironment(projectID int64, name, branch string) erro
 	return c.parseResponse(resp)
 }
 
-func (c *APIClient) DestroyEnvironment(projectID int64, name string, removeVolumes bool) error {
-	var params url.Values
+func (c *APIClient) DestroyEnvironment(projectID int64, name string, removeVolumes, deleteBranch bool) error {
+	params := url.Values{}
 	if !removeVolumes {
-		params = url.Values{}
 		params.Set("keep-volumes", "true")
+	}
+	if deleteBranch {
+		params.Set("force", "true")
 	}
 	resp, err := c.client.Delete(
 		fmt.Sprintf("/api/projects/%d/environments/%s", projectID, name),

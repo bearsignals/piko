@@ -13,11 +13,15 @@ var destroyCmd = &cobra.Command{
 	Annotations: Requires(ToolGit, ToolTmux),
 }
 
-var keepVolumes bool
+var (
+	keepVolumes  bool
+	forceDestroy bool
+)
 
 func init() {
 	envCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVar(&keepVolumes, "keep-volumes", false, "Keep Docker volumes instead of removing them")
+	destroyCmd.Flags().BoolVarP(&forceDestroy, "force", "f", false, "Also delete the git branch")
 }
 
 func runDestroyWithSelection(cmd *cobra.Command, args []string) error {
@@ -38,7 +42,7 @@ func runDestroy(name string) error {
 
 	api := NewAPIClient()
 	if api.IsServerRunning() {
-		if err := api.DestroyEnvironment(resolved.Project.ID, resolved.Environment.Name, !keepVolumes); err == nil {
+		if err := api.DestroyEnvironment(resolved.Project.ID, resolved.Environment.Name, !keepVolumes, forceDestroy); err == nil {
 			return nil
 		}
 	}
@@ -48,6 +52,7 @@ func runDestroy(name string) error {
 		Project:       resolved.Project,
 		Environment:   resolved.Environment,
 		RemoveVolumes: !keepVolumes,
+		DeleteBranch:  forceDestroy,
 		Logger:        &operations.StdoutLogger{},
 	})
 }
