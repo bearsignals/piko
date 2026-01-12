@@ -78,7 +78,7 @@ func runRespond(cmd *cobra.Command, args []string) error {
 
 func fetchNotifications() ([]ccNotification, error) {
 	client := httpclient.Standard()
-	resp, err := client.Get("/api/orchestra/notifications", nil)
+	resp, err := client.Get("/api/ws/orchestra/notifications", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func fetchNotifications() ([]ccNotification, error) {
 
 func sendResponse(notificationID, response string) error {
 	client := httpclient.Standard()
-	resp, err := client.Post("/api/orchestra/respond", respondRequest{
+	resp, err := client.Post("/api/ws/orchestra/respond", respondRequest{
 		NotificationID: notificationID,
 		Response:       response,
 	}, nil)

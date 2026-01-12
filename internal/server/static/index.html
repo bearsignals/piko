@@ -1416,7 +1416,7 @@
 
       function connectWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/api/orchestra/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/orchestra`;
 
         ws = new WebSocket(wsUrl);
 
@@ -1501,7 +1501,7 @@
         input.disabled = true;
 
         try {
-          const res = await fetch("/api/orchestra/respond", {
+          const res = await fetch("/api/ws/orchestra/respond", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ notification_id: id, response }),
@@ -1537,7 +1537,7 @@
         }
 
         try {
-          const res = await fetch("/api/orchestra/respond", {
+          const res = await fetch("/api/ws/orchestra/respond", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1585,7 +1585,7 @@
         }
 
         try {
-          const res = await fetch("/api/orchestra/respond", {
+          const res = await fetch("/api/ws/orchestra/respond", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1649,7 +1649,7 @@
         }
 
         try {
-          const res = await fetch("/api/orchestra/respond", {
+          const res = await fetch("/api/ws/orchestra/respond", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1714,7 +1714,7 @@
         }
 
         try {
-          const res = await fetch("/api/orchestra/respond", {
+          const res = await fetch("/api/ws/orchestra/respond", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1750,7 +1750,7 @@
 
       async function dismissNotification(id) {
         try {
-          const res = await fetch(`/api/orchestra/notifications/${id}`, {
+          const res = await fetch(`/api/ws/orchestra/notifications/${id}`, {
             method: "DELETE",
           });
 

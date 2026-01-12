@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -40,24 +41,24 @@ func (s *Server) Start() error {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/orchestra/ws", s.handleOrchestraWS)
-	mux.HandleFunc("GET /api/orchestra/notifications", s.handleOrchestraList)
-	mux.HandleFunc("POST /api/orchestra/notify", s.handleOrchestraNotify)
-	mux.HandleFunc("POST /api/orchestra/respond", s.handleOrchestraRespond)
-	mux.HandleFunc("DELETE /api/orchestra/notifications/{id}", s.handleOrchestraDismiss)
+	mux.HandleFunc("GET /api/ws/orchestra", s.handleOrchestraWS)
+	mux.HandleFunc("GET /api/ws/orchestra/notifications", s.handleOrchestraList)
+	mux.HandleFunc("POST /api/ws/orchestra/notify", s.handleOrchestraNotify)
+	mux.HandleFunc("POST /api/ws/orchestra/respond", s.handleOrchestraRespond)
+	mux.HandleFunc("DELETE /api/ws/orchestra/notifications/{id}", s.handleOrchestraDismiss)
+	mux.HandleFunc("GET /api/ws/projects/{projectID}/environments/create/stream", s.handleCreateEnvironmentStream)
+	mux.HandleFunc("GET /api/ws/projects/{projectID}/environments/{name}/destroy/stream", s.handleDestroyEnvironmentStream)
 
 	mux.HandleFunc("GET /api/projects", s.handleListProjects)
 	mux.HandleFunc("GET /api/projects/{projectID}/branches", s.handleListBranches)
 	mux.HandleFunc("GET /api/projects/{projectID}/environments", s.handleListEnvironments)
 	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}", s.handleGetEnvironment)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments", s.handleCreateEnvironment)
-	mux.HandleFunc("GET /api/projects/{projectID}/environments/create/stream", s.handleCreateEnvironmentStream)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/open", s.handleOpenInEditor)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/up", s.handleUp)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/down", s.handleDown)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/restart", s.handleRestart)
 	mux.HandleFunc("DELETE /api/projects/{projectID}/environments/{name}", s.handleDestroyEnvironment)
-	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}/destroy/stream", s.handleDestroyEnvironmentStream)
 
 	if s.devMode {
 		mux.Handle("GET /", http.FileServer(http.Dir("internal/server/static")))
@@ -72,11 +73,7 @@ func (s *Server) Start() error {
 
 	timeoutHandler := http.TimeoutHandler(mux, 60*time.Second, "request timeout")
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/orchestra/ws" {
-			mux.ServeHTTP(w, r)
-			return
-		}
-		if len(r.URL.Path) > 13 && (r.URL.Path[len(r.URL.Path)-13:] == "create/stream" || r.URL.Path[len(r.URL.Path)-14:] == "destroy/stream") {
+		if strings.HasPrefix(r.URL.Path, "/api/ws/") {
 			mux.ServeHTTP(w, r)
 			return
 		}
@@ -97,6 +94,7 @@ func (s *Server) Start() error {
 	go func() {
 		<-done
 		fmt.Println("\nShutting down...")
+		s.hub.Stop()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		s.server.Shutdown(ctx)

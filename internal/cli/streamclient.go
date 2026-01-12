@@ -63,7 +63,7 @@ func (c *StreamClient) CreateEnvironmentStream(projectID int64, name, branch str
 	if err != nil {
 		return fmt.Errorf("invalid base URL: %w", err)
 	}
-	u.Path = fmt.Sprintf("/api/projects/%d/environments/create/stream", projectID)
+	u.Path = fmt.Sprintf("/api/ws/projects/%d/environments/create/stream", projectID)
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -123,7 +123,7 @@ func (c *StreamClient) DestroyEnvironmentStream(projectID int64, name string, re
 	if err != nil {
 		return fmt.Errorf("invalid base URL: %w", err)
 	}
-	u.Path = fmt.Sprintf("/api/projects/%d/environments/%s/destroy/stream", projectID, name)
+	u.Path = fmt.Sprintf("/api/ws/projects/%d/environments/%s/destroy/stream", projectID, name)
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {

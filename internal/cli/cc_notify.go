@@ -106,7 +106,7 @@ func runCCNotify(cmd *cobra.Command, args []string) error {
 	log.Struct("notifyRequest", req)
 
 	client := httpclient.Quick()
-	resp, err := client.Post("/api/orchestra/notify", req, nil)
+	resp, err := client.Post("/api/ws/orchestra/notify", req, nil)
 	if err != nil {
 		log.Log("ERROR http request failed: %v", err)
 		return fmt.Errorf("failed to send notification: %w", err)
