@@ -92,4 +92,4 @@ Opens dashboard at `localhost:19876` to view/manage all environments.
 
 ## License
 
-MIT
+MIT License

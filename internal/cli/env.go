@@ -2,13 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"os/exec"
-	"strconv"
-	"strings"
 
 	"github.com/gwuah/piko/internal/docker"
 	"github.com/gwuah/piko/internal/env"
-	"github.com/gwuah/piko/internal/ports"
 	"github.com/spf13/cobra"
 )
 
@@ -44,12 +40,12 @@ func runVars(cmd *cobra.Command, args []string) error {
 	}
 	defer resolved.Close()
 
-	allocations, err := discoverPorts(resolved.Environment.DockerProject, resolved.ComposeDir)
+	portResult, err := docker.DiscoverPorts(resolved.ComposeDir, resolved.Environment.DockerProject)
 	if err != nil {
 		return fmt.Errorf("failed to discover ports: %w", err)
 	}
 
-	pikoEnv := env.Build(resolved.Project, resolved.Environment, allocations)
+	pikoEnv := env.Build(resolved.Project, resolved.Environment, portResult.Allocations)
 
 	if varsJSON {
 		data, err := pikoEnv.ToJSON()
@@ -62,46 +58,4 @@ func runVars(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func discoverPorts(dockerProject, composeDir string) ([]ports.Allocation, error) {
-	var allocations []ports.Allocation
-
-	if dockerProject == "" {
-		return allocations, nil
-	}
-
-	composeConfig, err := docker.ParseComposeConfig(composeDir)
-	if err != nil {
-		return nil, err
-	}
-
-	for service, containerPorts := range composeConfig.GetServicePorts() {
-		for _, containerPort := range containerPorts {
-			cmd := exec.Command("docker", "compose",
-				"-p", dockerProject,
-				"port", service, fmt.Sprintf("%d", containerPort))
-			cmd.Dir = composeDir
-
-			output, err := cmd.Output()
-			if err != nil {
-				continue
-			}
-
-			outputStr := strings.TrimSpace(string(output))
-			parts := strings.Split(outputStr, ":")
-			if len(parts) >= 2 {
-				hostPort, _ := strconv.Atoi(parts[len(parts)-1])
-				if hostPort > 0 {
-					allocations = append(allocations, ports.Allocation{
-						Service:       service,
-						ContainerPort: containerPort,
-						HostPort:      hostPort,
-					})
-				}
-			}
-		}
-	}
-
-	return allocations, nil
 }

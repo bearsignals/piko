@@ -48,12 +48,12 @@ func runRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("containers not running (run 'piko env up %s' first)", name)
 	}
 
-	allocations, err := discoverPorts(resolved.Environment.DockerProject, resolved.ComposeDir)
+	portResult, err := docker.DiscoverPorts(resolved.ComposeDir, resolved.Environment.DockerProject)
 	if err != nil {
 		return fmt.Errorf("failed to discover ports: %w", err)
 	}
 
-	pikoEnv := env.Build(resolved.Project, resolved.Environment, allocations)
+	pikoEnv := env.Build(resolved.Project, resolved.Environment, portResult.Allocations)
 	envVars := append(os.Environ(), pikoEnv.ToEnvSlice()...)
 
 	shellCmd := exec.Command("sh", "-c", cfg.Scripts.Run)
