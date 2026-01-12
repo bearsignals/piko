@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -18,7 +19,16 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		host := u.Hostname()
+		return host == "localhost" || host == "127.0.0.1" || host == "::1"
 	},
 }
 
@@ -65,15 +75,17 @@ type Hub struct {
 	broadcast             chan []byte
 	register              chan *Client
 	unregister            chan *Client
+	done                  chan struct{}
 	notifications         map[string]*CCNotification
 	notificationsByTarget map[string]string
 	mu                    sync.RWMutex
 }
 
 type Client struct {
-	hub  *Hub
-	conn *websocket.Conn
-	send chan []byte
+	hub      *Hub
+	conn     *websocket.Conn
+	send     chan []byte
+	existing []*CCNotification
 }
 
 func NewHub() *Hub {
@@ -82,6 +94,7 @@ func NewHub() *Hub {
 		broadcast:             make(chan []byte, 256),
 		register:              make(chan *Client),
 		unregister:            make(chan *Client),
+		done:                  make(chan struct{}),
 		notifications:         make(map[string]*CCNotification),
 		notificationsByTarget: make(map[string]string),
 	}
@@ -90,8 +103,35 @@ func NewHub() *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
+		case <-h.done:
+			for client := range h.clients {
+				close(client.send)
+			}
+			return
 		case client := <-h.register:
 			h.clients[client] = true
+			for _, n := range client.existing {
+				payload, err := json.Marshal(n)
+				if err != nil {
+					log.Printf("failed to marshal existing notification payload: %v", err)
+					continue
+				}
+				msg := OrchestraMessage{
+					Type:      "notification",
+					Payload:   payload,
+					Timestamp: time.Now(),
+				}
+				data, err := json.Marshal(msg)
+				if err != nil {
+					log.Printf("failed to marshal existing notification message: %v", err)
+					continue
+				}
+				select {
+				case client.send <- data:
+				default:
+				}
+			}
+			client.existing = nil
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
@@ -108,6 +148,10 @@ func (h *Hub) Run() {
 			}
 		}
 	}
+}
+
+func (h *Hub) Stop() {
+	close(h.done)
 }
 
 func (h *Hub) AddNotification(n *CCNotification) {
@@ -247,38 +291,23 @@ func (c *Client) writePump() {
 func (s *Server) handleOrchestraWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		log.Printf("websocket upgrade failed: %v", err)
 		return
 	}
 
-	client := &Client{
-		hub:  s.hub,
-		conn: conn,
-		send: make(chan []byte, 256),
-	}
-	s.hub.register <- client
-
 	existing := s.hub.ListNotifications()
-	for _, n := range existing {
-		payload, err := json.Marshal(n)
-		if err != nil {
-			log.Printf("failed to marshal existing notification payload: %v", err)
-			continue
-		}
-		msg := OrchestraMessage{
-			Type:      "notification",
-			Payload:   payload,
-			Timestamp: time.Now(),
-		}
-		data, err := json.Marshal(msg)
-		if err != nil {
-			log.Printf("failed to marshal existing notification message: %v", err)
-			continue
-		}
-		client.send <- data
+
+	client := &Client{
+		hub:      s.hub,
+		conn:     conn,
+		send:     make(chan []byte, 256),
+		existing: existing,
 	}
 
 	go client.writePump()
 	go client.readPump()
+
+	s.hub.register <- client
 }
 
 func (s *Server) handleOrchestraNotify(w http.ResponseWriter, r *http.Request) {
