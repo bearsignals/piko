@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gwuah/piko/internal/run"
@@ -82,4 +83,43 @@ func DeleteBranch(repoPath, branchName string) error {
 		return fmt.Errorf("git branch delete failed: %s: %w", string(output), err)
 	}
 	return nil
+}
+
+type BranchInfo struct {
+	Name   string `json:"name"`
+	Commit string `json:"commit"`
+}
+
+func ListRecentBranches(repoPath string, limit int) ([]BranchInfo, error) {
+	format := "%(refname:short)\t%(objectname:short)"
+	output, err := run.Command("git", "for-each-ref",
+		fmt.Sprintf("--count=%d", limit),
+		"--sort=-committerdate",
+		fmt.Sprintf("--format=%s", format),
+		"refs/heads/",
+	).Dir(repoPath).Timeout(gitTimeout).Output()
+	if err != nil {
+		return nil, fmt.Errorf("git for-each-ref failed: %w", err)
+	}
+
+	var branches []BranchInfo
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		name := parts[0]
+		if strings.HasPrefix(name, ".piko/") {
+			continue
+		}
+		branches = append(branches, BranchInfo{
+			Name:   name,
+			Commit: parts[1],
+		})
+	}
+	return branches, nil
 }

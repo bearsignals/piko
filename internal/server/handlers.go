@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gwuah/piko/internal/docker"
+	"github.com/gwuah/piko/internal/git"
 	"github.com/gwuah/piko/internal/operations"
 	"github.com/gwuah/piko/internal/run"
 	"github.com/gwuah/piko/internal/state"
@@ -467,6 +468,22 @@ func (s *Server) handleRestart(w http.ResponseWriter, r *http.Request) {
 
 	s.broadcastStateChange("env_updated", project.ID, name)
 	writeJSON(w, http.StatusOK, SuccessResponse{Success: true})
+}
+
+func (s *Server) handleListBranches(w http.ResponseWriter, r *http.Request) {
+	project, err := s.getProjectFromPath(r)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	branches, err := git.ListRecentBranches(project.RootPath, 15)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, SuccessResponse{Success: false, Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, branches)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) {

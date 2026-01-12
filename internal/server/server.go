@@ -47,6 +47,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("DELETE /api/orchestra/notifications/{id}", s.handleOrchestraDismiss)
 
 	mux.HandleFunc("GET /api/projects", s.handleListProjects)
+	mux.HandleFunc("GET /api/projects/{projectID}/branches", s.handleListBranches)
 	mux.HandleFunc("GET /api/projects/{projectID}/environments", s.handleListEnvironments)
 	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}", s.handleGetEnvironment)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments", s.handleCreateEnvironment)

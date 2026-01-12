@@ -731,7 +731,9 @@
           </div>
           <div class="form-group">
             <label for="env-branch">Base branch (optional)</label>
-            <input type="text" id="env-branch" placeholder="main, develop, etc." />
+            <select id="env-branch">
+              <option value="">HEAD (default)</option>
+            </select>
             <div class="form-hint">
               Branch to create from. Defaults to HEAD if empty.
             </div>
@@ -1259,10 +1261,32 @@
         }
       }
 
-      function showCreateModal(projectId) {
+      async function showCreateModal(projectId) {
         document.getElementById("create-project-id").value = projectId;
         document.getElementById("create-modal").classList.remove("hidden");
         document.getElementById("env-name").focus();
+
+        const select = document.getElementById("env-branch");
+        select.innerHTML = '<option value="">Loading branches...</option>';
+        select.disabled = true;
+
+        try {
+          const res = await fetch(`/api/projects/${projectId}/branches`);
+          const branches = await res.json();
+
+          select.innerHTML = '<option value="">HEAD (default)</option>';
+          for (const branch of branches) {
+            const option = document.createElement("option");
+            option.value = branch.name;
+            option.textContent = `${branch.name} (${branch.commit})`;
+            select.appendChild(option);
+          }
+        } catch (err) {
+          select.innerHTML = '<option value="">HEAD (default)</option>';
+          showError("Failed to load branches");
+        } finally {
+          select.disabled = false;
+        }
       }
 
       function hideCreateModal() {
