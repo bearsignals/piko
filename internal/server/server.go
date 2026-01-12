@@ -57,6 +57,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/down", s.handleDown)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/restart", s.handleRestart)
 	mux.HandleFunc("DELETE /api/projects/{projectID}/environments/{name}", s.handleDestroyEnvironment)
+	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}/destroy/stream", s.handleDestroyEnvironmentStream)
 
 	if s.devMode {
 		mux.Handle("GET /", http.FileServer(http.Dir("internal/server/static")))
@@ -75,7 +76,7 @@ func (s *Server) Start() error {
 			mux.ServeHTTP(w, r)
 			return
 		}
-		if len(r.URL.Path) > 20 && r.URL.Path[len(r.URL.Path)-13:] == "create/stream" {
+		if len(r.URL.Path) > 13 && (r.URL.Path[len(r.URL.Path)-13:] == "create/stream" || r.URL.Path[len(r.URL.Path)-14:] == "destroy/stream") {
 			mux.ServeHTTP(w, r)
 			return
 		}

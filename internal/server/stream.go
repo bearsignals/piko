@@ -118,6 +118,89 @@ func (s *Server) handleCreateEnvironmentStream(w http.ResponseWriter, r *http.Re
 	})
 }
 
+type StreamDestroyRequest struct {
+	Action        string `json:"action"`
+	Environment   string `json:"environment"`
+	RemoveVolumes bool   `json:"remove_volumes"`
+	DeleteBranch  bool   `json:"delete_branch"`
+}
+
+func (s *Server) handleDestroyEnvironmentStream(w http.ResponseWriter, r *http.Request) {
+	projectIDStr := r.PathValue("projectID")
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	project, err := s.db.GetProjectByID(projectID)
+	if err != nil {
+		http.Error(w, "project not found", http.StatusNotFound)
+		return
+	}
+
+	name := r.PathValue("name")
+	environment, err := s.db.GetEnvironmentByName(projectID, name)
+	if err != nil {
+		http.Error(w, "environment not found", http.StatusNotFound)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("websocket upgrade failed: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		log.Printf("failed to read destroy request: %v", err)
+		return
+	}
+
+	var req StreamDestroyRequest
+	if err := json.Unmarshal(message, &req); err != nil {
+		stream.SendError(conn, "invalid request format")
+		return
+	}
+
+	factory := stream.NewWriterFactory(conn, os.Stdout)
+	destroyStdout, destroyStderr := factory.Destroy()
+	dockerStdout, dockerStderr := factory.Docker()
+	pikoWriter := factory.Piko()
+	pikoLogger := &operations.WriterLogger{Out: pikoWriter, Err: pikoWriter}
+
+	err = operations.DestroyEnvironment(operations.DestroyEnvironmentOptions{
+		DB:            s.db,
+		Project:       project,
+		Environment:   environment,
+		RemoveVolumes: req.RemoveVolumes,
+		DeleteBranch:  req.DeleteBranch,
+		Logger:        pikoLogger,
+		Output: &operations.DestroyOutputWriters{
+			DestroyStdout: destroyStdout,
+			DestroyStderr: destroyStderr,
+			DockerStdout:  dockerStdout,
+			DockerStderr:  dockerStderr,
+		},
+	})
+
+	destroyStdout.Flush()
+	destroyStderr.Flush()
+	dockerStdout.Flush()
+	dockerStderr.Flush()
+	pikoWriter.Flush()
+
+	if err != nil {
+		stream.SendError(conn, err.Error())
+		return
+	}
+
+	s.broadcastStateChange("env_deleted", project.ID, name)
+	stream.SendComplete(conn, nil)
+}
+
 type StreamLogger struct {
 	writer *stream.StreamWriter
 }

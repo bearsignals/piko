@@ -256,6 +256,13 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 	}, nil
 }
 
+type DestroyOutputWriters struct {
+	DestroyStdout io.Writer
+	DestroyStderr io.Writer
+	DockerStdout  io.Writer
+	DockerStderr  io.Writer
+}
+
 type DestroyEnvironmentOptions struct {
 	DB            *state.DB
 	Project       *state.Project
@@ -263,6 +270,7 @@ type DestroyEnvironmentOptions struct {
 	RemoveVolumes bool
 	DeleteBranch  bool
 	Logger        Logger
+	Output        *DestroyOutputWriters
 }
 
 func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
@@ -279,6 +287,9 @@ func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
 	if cfg.Scripts.Destroy != "" {
 		pikoEnv := env.Build(opts.Project, opts.Environment, []ports.Allocation{})
 		runner := config.NewScriptRunner(opts.Environment.Path, pikoEnv.ToEnvSlice())
+		if opts.Output != nil && opts.Output.DestroyStdout != nil && opts.Output.DestroyStderr != nil {
+			runner.WithOutput(opts.Output.DestroyStdout, opts.Output.DestroyStderr)
+		}
 
 		log.Info("Running destroy script...")
 		if err := runner.RunDestroy(cfg.Scripts.Destroy); err != nil {
@@ -301,6 +312,10 @@ func DestroyEnvironment(opts DestroyEnvironmentOptions) error {
 			composeCmd = exec.Command("docker", "compose", "-p", opts.Environment.DockerProject, "down")
 		}
 		composeCmd.Dir = composeDir
+		if opts.Output != nil && opts.Output.DockerStdout != nil && opts.Output.DockerStderr != nil {
+			composeCmd.Stdout = opts.Output.DockerStdout
+			composeCmd.Stderr = opts.Output.DockerStderr
+		}
 
 		if err := composeCmd.Run(); err != nil {
 			log.Warnf("failed to stop containers: %v", err)

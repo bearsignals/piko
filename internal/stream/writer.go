@@ -191,6 +191,10 @@ func (f *WriterFactory) Setup() (stdout, stderr *StreamWriter) {
 	return f.NewWriter("script:setup", "stdout"), f.NewWriter("script:setup", "stderr")
 }
 
+func (f *WriterFactory) Destroy() (stdout, stderr *StreamWriter) {
+	return f.NewWriter("script:destroy", "stdout"), f.NewWriter("script:destroy", "stderr")
+}
+
 func (f *WriterFactory) Piko() *StreamWriter {
 	return f.NewWriter("piko", "stdout")
 }
