@@ -2,22 +2,31 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 )
 
-// ScriptRunner executes lifecycle scripts with the appropriate environment.
 type ScriptRunner struct {
 	WorkDir string
 	Env     []string
+	Stdout  io.Writer
+	Stderr  io.Writer
 }
 
-// NewScriptRunner creates a new script runner.
 func NewScriptRunner(workDir string, env []string) *ScriptRunner {
 	return &ScriptRunner{
 		WorkDir: workDir,
 		Env:     env,
+		Stdout:  os.Stdout,
+		Stderr:  os.Stderr,
 	}
+}
+
+func (r *ScriptRunner) WithOutput(stdout, stderr io.Writer) *ScriptRunner {
+	r.Stdout = stdout
+	r.Stderr = stderr
+	return r
 }
 
 func (r *ScriptRunner) RunPrepare(script string) error {
@@ -34,8 +43,6 @@ func (r *ScriptRunner) RunSetup(script string) error {
 	return r.run(script)
 }
 
-// RunDestroy executes the destroy script.
-// Returns nil if the script is empty.
 func (r *ScriptRunner) RunDestroy(script string) error {
 	if script == "" {
 		return nil
@@ -47,8 +54,8 @@ func (r *ScriptRunner) run(script string) error {
 	cmd := exec.Command("sh", "-c", script)
 	cmd.Dir = r.WorkDir
 	cmd.Env = append(os.Environ(), r.Env...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = r.Stdout
+	cmd.Stderr = r.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("script failed: %w", err)

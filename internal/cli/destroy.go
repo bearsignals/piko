@@ -42,7 +42,8 @@ func runDestroy(name string) error {
 
 	api := NewAPIClient()
 	if api.IsServerRunning() {
-		if err := api.DestroyEnvironment(resolved.Project.ID, resolved.Environment.Name, !keepVolumes, forceDestroy); err == nil {
+		streamClient := NewStreamClient()
+		if err := streamClient.DestroyEnvironmentStream(resolved.Project.ID, resolved.Environment.Name, !keepVolumes, forceDestroy); err == nil {
 			return nil
 		}
 	}

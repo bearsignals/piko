@@ -51,11 +51,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/projects/{projectID}/environments", s.handleListEnvironments)
 	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}", s.handleGetEnvironment)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments", s.handleCreateEnvironment)
+	mux.HandleFunc("GET /api/projects/{projectID}/environments/create/stream", s.handleCreateEnvironmentStream)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/open", s.handleOpenInEditor)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/up", s.handleUp)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/down", s.handleDown)
 	mux.HandleFunc("POST /api/projects/{projectID}/environments/{name}/restart", s.handleRestart)
 	mux.HandleFunc("DELETE /api/projects/{projectID}/environments/{name}", s.handleDestroyEnvironment)
+	mux.HandleFunc("GET /api/projects/{projectID}/environments/{name}/destroy/stream", s.handleDestroyEnvironmentStream)
 
 	if s.devMode {
 		mux.Handle("GET /", http.FileServer(http.Dir("internal/server/static")))
@@ -71,6 +73,10 @@ func (s *Server) Start() error {
 	timeoutHandler := http.TimeoutHandler(mux, 60*time.Second, "request timeout")
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/orchestra/ws" {
+			mux.ServeHTTP(w, r)
+			return
+		}
+		if len(r.URL.Path) > 13 && (r.URL.Path[len(r.URL.Path)-13:] == "create/stream" || r.URL.Path[len(r.URL.Path)-14:] == "destroy/stream") {
 			mux.ServeHTTP(w, r)
 			return
 		}
