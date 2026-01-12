@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"time"
 )
@@ -23,6 +24,8 @@ type Cmd struct {
 	args    []string
 	dir     string
 	timeout time.Duration
+	stdout  io.Writer
+	stderr  io.Writer
 }
 
 func (c *Cmd) Dir(dir string) *Cmd {
@@ -35,6 +38,16 @@ func (c *Cmd) Timeout(d time.Duration) *Cmd {
 	return c
 }
 
+func (c *Cmd) Stdout(w io.Writer) *Cmd {
+	c.stdout = w
+	return c
+}
+
+func (c *Cmd) Stderr(w io.Writer) *Cmd {
+	c.stderr = w
+	return c
+}
+
 func (c *Cmd) Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
@@ -42,6 +55,12 @@ func (c *Cmd) Run() error {
 	cmd := exec.CommandContext(ctx, c.name, c.args...)
 	if c.dir != "" {
 		cmd.Dir = c.dir
+	}
+	if c.stdout != nil {
+		cmd.Stdout = c.stdout
+	}
+	if c.stderr != nil {
+		cmd.Stderr = c.stderr
 	}
 
 	err := cmd.Run()

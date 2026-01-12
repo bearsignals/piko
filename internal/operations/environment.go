@@ -2,6 +2,7 @@ package operations
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,12 +16,24 @@ import (
 	"github.com/gwuah/piko/internal/tmux"
 )
 
+type OutputWriters struct {
+	GitStdout     io.Writer
+	GitStderr     io.Writer
+	DockerStdout  io.Writer
+	DockerStderr  io.Writer
+	PrepareStdout io.Writer
+	PrepareStderr io.Writer
+	SetupStdout   io.Writer
+	SetupStderr   io.Writer
+}
+
 type CreateEnvironmentOptions struct {
 	DB          *state.DB
 	Project     *state.Project
 	Name        string
 	Branch      string
 	Logger      Logger
+	Output      *OutputWriters
 }
 
 type CreateEnvironmentResult struct {
@@ -72,6 +85,10 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 		BasePath:   worktreesDir,
 		BranchName: opts.Branch,
 		RepoPath:   opts.Project.RootPath,
+	}
+	if opts.Output != nil {
+		wtOpts.Stdout = opts.Output.GitStdout
+		wtOpts.Stderr = opts.Output.GitStderr
 	}
 	wt, err := git.CreateWorktree(wtOpts)
 	if err != nil {
@@ -154,6 +171,9 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 	if cfg.Scripts.Prepare != "" {
 		pikoEnv := env.Build(opts.Project, environment, allocations)
 		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
+		if opts.Output != nil && opts.Output.PrepareStdout != nil && opts.Output.PrepareStderr != nil {
+			runner.WithOutput(opts.Output.PrepareStdout, opts.Output.PrepareStderr)
+		}
 
 		log.Info("Running prepare script...")
 		if err := runner.RunPrepare(cfg.Scripts.Prepare); err != nil {
@@ -170,6 +190,10 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 			"-f", "docker-compose.piko.yml",
 			"up", "-d")
 		composeCmd.Dir = composeDir
+		if opts.Output != nil && opts.Output.DockerStdout != nil && opts.Output.DockerStderr != nil {
+			composeCmd.Stdout = opts.Output.DockerStdout
+			composeCmd.Stderr = opts.Output.DockerStderr
+		}
 
 		if err := composeCmd.Run(); err != nil {
 			cleanupWithDB()
@@ -188,6 +212,9 @@ func CreateEnvironment(opts CreateEnvironmentOptions) (*CreateEnvironmentResult,
 	if cfg.Scripts.Setup != "" {
 		pikoEnv := env.Build(opts.Project, environment, allocations)
 		runner := config.NewScriptRunner(wt.Path, pikoEnv.ToEnvSlice())
+		if opts.Output != nil && opts.Output.SetupStdout != nil && opts.Output.SetupStderr != nil {
+			runner.WithOutput(opts.Output.SetupStdout, opts.Output.SetupStderr)
+		}
 
 		log.Info("Running setup script...")
 		if err := runner.RunSetup(cfg.Scripts.Setup); err != nil {

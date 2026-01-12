@@ -78,7 +78,8 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	api := NewAPIClient()
 	if api.IsServerRunning() {
-		if err := api.CreateEnvironment(project.ID, name, createBranch); err == nil {
+		streamClient := NewStreamClient()
+		if err := streamClient.CreateEnvironmentStream(project.ID, name, createBranch); err == nil {
 			sessionName := tmux.SessionName(project.Name, name)
 			if !createNoAttach && tmux.SessionExists(sessionName) {
 				return tmux.Attach(sessionName)

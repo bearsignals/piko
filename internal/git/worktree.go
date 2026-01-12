@@ -2,6 +2,7 @@ package git
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,6 +27,8 @@ type WorktreeOptions struct {
 	BasePath   string
 	BranchName string
 	RepoPath   string
+	Stdout     io.Writer
+	Stderr     io.Writer
 }
 
 type WorktreeResult struct {
@@ -45,6 +48,14 @@ func CreateWorktree(opts WorktreeOptions) (*WorktreeResult, error) {
 
 	if opts.RepoPath != "" {
 		cmd = cmd.Dir(opts.RepoPath)
+	}
+
+	if opts.Stdout != nil && opts.Stderr != nil {
+		cmd = cmd.Stdout(opts.Stdout).Stderr(opts.Stderr).Timeout(gitTimeout)
+		if err := cmd.Run(); err != nil {
+			return nil, fmt.Errorf("git worktree add failed: %w", err)
+		}
+		return &WorktreeResult{Path: worktreePath, Branch: opts.Name}, nil
 	}
 
 	output, err := cmd.Timeout(gitTimeout).CombinedOutput()
