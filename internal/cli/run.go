@@ -10,6 +10,7 @@ import (
 	"github.com/gwuah/piko/internal/config"
 	"github.com/gwuah/piko/internal/docker"
 	"github.com/gwuah/piko/internal/env"
+	"github.com/gwuah/piko/internal/ports"
 	"github.com/spf13/cobra"
 )
 
@@ -28,13 +29,13 @@ func runRun(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
 	name := args[0]
 
-	resolved, err := RequireDockerGlobally(name)
+	resolved, err := ResolveEnvironmentGlobally(name)
 	if err != nil {
 		return err
 	}
 	defer resolved.Close()
 
-	cfg, err := config.Load(resolved.Project.RootPath)
+	cfg, err := config.Load(resolved.Environment.Path)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -43,14 +44,17 @@ func runRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no run script defined in .piko.yml (add scripts.run)")
 	}
 
-	status := docker.GetProjectStatus(resolved.ComposeDir, resolved.Environment.DockerProject)
-	if status != docker.StatusRunning {
-		return fmt.Errorf("containers not running (run 'piko env up %s' first)", name)
-	}
+	var allocations []ports.Allocation
+	if resolved.Environment.DockerProject != "" {
+		status := docker.GetProjectStatus(resolved.ComposeDir, resolved.Environment.DockerProject)
+		if status != docker.StatusRunning {
+			return fmt.Errorf("containers not running (run 'piko env up %s' first)", name)
+		}
 
-	allocations, err := discoverPorts(resolved.Environment.DockerProject, resolved.ComposeDir)
-	if err != nil {
-		return fmt.Errorf("failed to discover ports: %w", err)
+		allocations, err = discoverPorts(resolved.Environment.DockerProject, resolved.ComposeDir)
+		if err != nil {
+			return fmt.Errorf("failed to discover ports: %w", err)
+		}
 	}
 
 	pikoEnv := env.Build(resolved.Project, resolved.Environment, allocations)
