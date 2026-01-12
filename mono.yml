@@ -1,0 +1,5 @@
+scripts:
+  init: "echo 'Running init script'"
+  setup: "echo 'Running setup script'"
+  run: "go run ./cmd/mono server --port $((5678 + MONO_ENV_ID))"
+  destroy: "echo 'Cleaning up'"
